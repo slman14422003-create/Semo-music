@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="motion_press">80</integer>
+    <integer name="motion_fast">120</integer>
+    <integer name="motion_short">200</integer>
+    <integer name="motion_base">300</integer>
+    <integer name="motion_long">400</integer>
+    <dimen name="radius_inner">6dp</dimen>
+    <dimen name="radius_thumb">14dp</dimen>
+    <dimen name="radius_card">28dp</dimen>
+    <dimen name="radius_sheet">32dp</dimen>
+</resources>

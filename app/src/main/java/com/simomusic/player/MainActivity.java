@@ -56,6 +56,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private MiniPlayer mini;
     private PlayerPanel panel;
     private LinearLayout mainCol;
+    private LinearLayout headerBar, selBar;
+    private TextView selCount;
     private androidx.swiperefreshlayout.widget.SwipeRefreshLayout srl;
     private androidx.activity.OnBackPressedCallback backCb;
     private int tab = 0;
@@ -191,7 +193,11 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             ((LinearLayout.LayoutParams) v.getLayoutParams()).setMarginStart(Ui.dp(this, 8));
             bar.addView(v);
         }
+        headerBar = bar;
         root.addView(bar);
+        selBar = buildSelectionBar();
+        selBar.setVisibility(View.GONE);
+        root.addView(selBar);
 
         search = Ui.searchEdit(this, getString(R.string.search_hint));
         search.setOnEditorActionListener((v, id, ev) -> {
@@ -319,7 +325,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
             @Override
             public void onState(boolean expanded) {
-                backCb.setEnabled(expanded);
+                updateBack();
             }
         });
         stage.addView(panel, new FrameLayout.LayoutParams(-1, -1));
@@ -330,7 +336,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         backCb = new androidx.activity.OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
-                panel.collapse(true);
+                if (panel.isExpanded()) panel.collapse(true);
+                else if (songs.select) exitSelect();
             }
         };
         getOnBackPressedDispatcher().addCallback(this, backCb);
@@ -382,6 +389,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     }
 
     private void setTab(int t) {
+        if (t != tab && songs.select) exitSelect();
         tab = t;
         refresh();
     }
@@ -423,6 +431,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         songs.header = all.isEmpty() ? null : actions;
         songs.setData(all);
         songs.setCurrent(Pb.currentId());
+        if (songs.select) syncSelection(all);
 
         subtitle.setText(getResources().getQuantityString(R.plurals.songs_n, total, total));
         styleSeg(segSongs, R.string.tab_songs, total, tab == 0);
@@ -501,12 +510,106 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
     @Override
     public void onClick(Track t, int pos) {
+        if (songs.select) {                  // the adapter already toggled the check mark
+            if (songs.selected.isEmpty()) exitSelect();
+            else updateSelBar();
+            return;
+        }
         Pb.play(this, shown, pos, false);
+    }
+
+    /** Long press starts selecting, with the pressed song already checked. */
+    @Override
+    public boolean onLong(Track t, int pos) {
+        if (tab != 0) return false;
+        songs.selected.add(t.id);
+        enterSelect();
+        return true;
     }
 
     @Override
     public void onMore(Track t, int pos) {
         Menus.song(this, t, this::refresh);
+    }
+
+    // ---- multi-select (long press a song): check many, delete them in one go ----------------------------------
+
+    private LinearLayout buildSelectionBar() {
+        LinearLayout b = new LinearLayout(this);
+        b.setGravity(Gravity.CENTER_VERTICAL);
+        b.setPaddingRelative(Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 4));
+        b.addView(Ui.icon(this, R.drawable.ic_close, R.string.cancel, v -> exitSelect()));
+        selCount = Ui.text(this, "", 20, R.color.text_primary);
+        selCount.setTypeface(Ui.titleFace(false));
+        selCount.setSingleLine(true);
+        selCount.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        LinearLayout.LayoutParams cp = Ui.weight(1);
+        cp.setMarginStart(Ui.dp(this, 14));
+        cp.setMarginEnd(Ui.dp(this, 8));
+        b.addView(selCount, cp);
+        View all = Ui.icon(this, R.drawable.ic_check, R.string.select_all, v -> {
+            songs.selectAll();
+            updateSelBar();
+        });
+        View del = Ui.icon(this, R.drawable.ic_delete, R.string.delete, v -> askDeleteSelected());
+        ((LinearLayout.LayoutParams) del.getLayoutParams()).setMarginStart(Ui.dp(this, 8));
+        b.addView(all);
+        b.addView(del);
+        return b;
+    }
+
+    private void enterSelect() {
+        swapBars(headerBar, selBar);
+        songs.setSelectMode(true);
+        updateSelBar();
+        updateBack();
+    }
+
+    private void exitSelect() {
+        if (selBar == null) return;
+        swapBars(selBar, headerBar);
+        songs.setSelectMode(false);
+        updateBack();
+    }
+
+    /** The old bar goes away at once (no jump in the column), the new one fades and slides in. */
+    private void swapBars(View out, View in) {
+        out.animate().cancel();
+        in.animate().cancel();
+        out.setVisibility(View.GONE);
+        out.setAlpha(1f);
+        out.setTranslationY(0f);
+        in.setAlpha(0f);
+        in.setTranslationY(-Ui.dp(this, 10));
+        in.setVisibility(View.VISIBLE);
+        in.animate().alpha(1f).translationY(0f).setDuration(Motion.SHORT).setInterpolator(Motion.ENTER).start();
+    }
+
+    private void updateSelBar() {
+        int n = songs.selected.size();
+        selCount.setText(getResources().getQuantityString(R.plurals.selected_n, n, n));
+    }
+
+    private void updateBack() {
+        if (backCb != null) backCb.setEnabled((panel != null && panel.isExpanded()) || (songs != null && songs.select));
+    }
+
+    /** After the list changed (songs deleted, search typed): only songs that are still shown stay checked. */
+    private void syncSelection(List<Track> visible) {
+        java.util.Set<Long> ids = new java.util.HashSet<>();
+        for (Track t : visible) ids.add(t.id);
+        if (songs.selected.retainAll(ids)) songs.notifyItemRangeChanged(0, songs.getItemCount());
+        if (songs.selected.isEmpty()) exitSelect();
+        else updateSelBar();
+    }
+
+    private void askDeleteSelected() {
+        final List<Track> pick = songs.selectedTracks();
+        if (pick.isEmpty()) return;
+        int n = pick.size();
+        Dlg.confirm(this, getResources().getQuantityString(R.plurals.selected_n, n, n),
+                getResources().getQuantityString(R.plurals.confirm_delete_songs, n, n),
+                R.string.delete, true, () -> DeleteActivity.start(this, pick));
     }
 
     /** Row 0 is "New playlist", then Favorites and the user's playlists. */

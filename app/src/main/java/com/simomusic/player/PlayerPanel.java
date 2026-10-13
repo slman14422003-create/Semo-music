@@ -506,6 +506,11 @@ public final class PlayerPanel extends FrameLayout {
                         drag = false;
                         crossed = false;
                         if (t != null) t.recycle();
+                        if (android.os.SystemClock.uptimeMillis() < coverBusyUntil) {
+                            t = null;               // the previous swipe is still flying: ignore this touch
+                            return true;
+                        }
+                        v.animate().cancel();       // a spring-back in progress must not fight the finger
                         t = VelocityTracker.obtain();
                         t.addMovement(e);
                         return true;
@@ -546,6 +551,7 @@ public final class PlayerPanel extends FrameLayout {
                         boolean up = e.getActionMasked() == MotionEvent.ACTION_UP;
                         if (!drag) {
                             if (up && Math.abs(dx) < slop && Math.abs(e.getRawY() - y0) < slop) onCoverTap(v, e.getX());
+                            if (v.getTranslationX() != 0f || v.getRotation() != 0f || v.getAlpha() != 1f) springBack(v);
                             return true;
                         }
                         v.postDelayed(() -> v.setLayerType(View.LAYER_TYPE_NONE, null), 700);
@@ -572,7 +578,7 @@ public final class PlayerPanel extends FrameLayout {
         });
     }
 
-    private long lastTap, seekTime;
+    private long lastTap, seekTime, coverBusyUntil;
     private int lastZone = 2, seekZone = 2;
     private final android.os.Handler tapH = new android.os.Handler(android.os.Looper.getMainLooper());
     private Runnable pendingToggle;
@@ -639,6 +645,7 @@ public final class PlayerPanel extends FrameLayout {
     /** Throws the old cover off the side, switches track, and lets the new cover settle in from the opposite side. */
     private void commitSwipe(final View v, final boolean next) {
         final float w = v.getWidth(), dir = next ? -1f : 1f;
+        coverBusyUntil = android.os.SystemClock.uptimeMillis() + Motion.SHORT + Motion.BASE + 80;
         np.quietArt = true;
         Ui.confirm(v);
         v.animate().translationX(dir * w * 1.15f).rotation(dir * 14f).alpha(0f).setDuration(Motion.SHORT)

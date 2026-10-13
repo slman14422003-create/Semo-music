@@ -30,6 +30,12 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         void onClick(Track t, int pos);
 
         void onMore(Track t, int pos);
+
+        /** Long press on a row; by default it opens the same menu as the ⋮ button. */
+        default boolean onLong(Track t, int pos) {
+            onMore(t, pos);
+            return true;
+        }
     }
 
     public final List<Track> data = new ArrayList<>();
@@ -71,10 +77,36 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
             same = a.id == b.id && a.title.equals(b.title) && a.artist.equals(b.artist);   // a renamed song redraws too
         }
         if (same) return;
+        if (hdr == hadHeader && list.size() < data.size() && removeOnly(list)) return;
         hadHeader = hdr;
         data.clear();
         data.addAll(list);
         notifyDataSetChanged();
+    }
+
+    /** When the new list is the old one minus some songs (a delete), the missing rows slide out one by one. */
+    private boolean removeOnly(List<Track> list) {
+        int j = 0;
+        for (int i = 0; i < data.size() && j < list.size(); i++) {
+            if (data.get(i).id == list.get(j).id) j++;
+        }
+        if (j != list.size()) return false;
+        j = list.size() - 1;
+        for (int i = data.size() - 1; i >= 0; i--) {
+            if (j >= 0 && data.get(i).id == list.get(j).id) {
+                data.set(i, list.get(j));
+                j--;
+            } else {
+                data.remove(i);
+                notifyItemRemoved(i + off());
+            }
+        }
+        final int n = data.size();
+        if (n > 0) {                  // the first / last rows change their rounded corners
+            notifyItemChanged(off());
+            if (n > 1) notifyItemChanged(n - 1 + off());
+        }
+        return true;
     }
 
     /** Play / pause: only the current row's equalizer changes. */
@@ -104,6 +136,26 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         long id = data.get(pos).id;
         if (!selected.remove(id)) selected.add(id);
         notifyItemChanged(pos + off());
+    }
+
+    /** Turns the check-mark mode on / off for every visible row at once. */
+    public void setSelectMode(boolean on) {
+        if (select == on && (on || selected.isEmpty())) return;
+        select = on;
+        if (!on) selected.clear();
+        notifyItemRangeChanged(0, getItemCount());
+    }
+
+    public void selectAll() {
+        for (Track t : data) selected.add(t.id);
+        notifyItemRangeChanged(0, getItemCount());
+    }
+
+    /** The selected songs, in list order. */
+    public List<Track> selectedTracks() {
+        List<Track> out = new ArrayList<>();
+        for (Track t : data) if (selected.contains(t.id)) out.add(t);
+        return out;
     }
 
     static final class VH extends RecyclerView.ViewHolder {
@@ -217,8 +269,7 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
             int p = h.getBindingAdapterPosition() - off();
             if (select || reorder || p < 0 || p >= data.size()) return false;
             Ui.tap(v);
-            l.onMore(data.get(p), p);
-            return true;
+            return l.onLong(data.get(p), p);
         });
         h.more.setOnClickListener(v -> {
             int p = h.getBindingAdapterPosition() - off();

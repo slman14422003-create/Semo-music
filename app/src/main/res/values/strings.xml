@@ -328,4 +328,19 @@
     <string name="upd_err_net">Could not reach GitHub. Check your internet connection and try again.</string>
     <string name="upd_err_limit">GitHub is limiting requests right now. Try again in a few minutes.</string>
     <string name="upd_err_file">The downloaded file is not a valid SimoMusic update.</string>
+    <!-- multi-select delete -->
+    <plurals name="selected_n">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="confirm_delete_songs">
+        <item quantity="one">Delete this song from your phone? This cannot be undone.</item>
+        <item quantity="other">Delete %d songs from your phone? This cannot be undone.</item>
+    </plurals>
+    <plurals name="songs_deleted_n">
+        <item quantity="one">Song deleted</item>
+        <item quantity="other">%d songs deleted</item>
+    </plurals>
+    <string name="delete_partial">%1$d of %2$d songs deleted</string>
+
 </resources>

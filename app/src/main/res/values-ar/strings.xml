@@ -340,4 +340,31 @@
     <string name="upd_err_net">تعذّر الوصول إلى GitHub. تحقق من الإنترنت وحاول مجدداً.</string>
     <string name="upd_err_limit">GitHub يحدّ الطلبات حالياً. حاول بعد دقائق.</string>
     <string name="upd_err_file">الملف الذي نُزّل ليس تحديثاً صالحاً لـ SimoMusic.</string>
+    <!-- multi-select delete -->
+    <plurals name="selected_n">
+        <item quantity="zero">لا شيء محدد</item>
+        <item quantity="one">تم تحديد أغنية</item>
+        <item quantity="two">تم تحديد أغنيتين</item>
+        <item quantity="few">تم تحديد %d أغانٍ</item>
+        <item quantity="many">تم تحديد %d أغنية</item>
+        <item quantity="other">تم تحديد %d أغنية</item>
+    </plurals>
+    <plurals name="confirm_delete_songs">
+        <item quantity="zero">حذف الأغاني من الهاتف؟ لا يمكن التراجع.</item>
+        <item quantity="one">حذف هذه الأغنية من الهاتف؟ لا يمكن التراجع.</item>
+        <item quantity="two">حذف هاتين الأغنيتين من الهاتف؟ لا يمكن التراجع.</item>
+        <item quantity="few">حذف %d أغانٍ من الهاتف؟ لا يمكن التراجع.</item>
+        <item quantity="many">حذف %d أغنية من الهاتف؟ لا يمكن التراجع.</item>
+        <item quantity="other">حذف %d أغنية من الهاتف؟ لا يمكن التراجع.</item>
+    </plurals>
+    <plurals name="songs_deleted_n">
+        <item quantity="zero">لم تُحذف أغانٍ</item>
+        <item quantity="one">تم حذف الأغنية</item>
+        <item quantity="two">تم حذف الأغنيتين</item>
+        <item quantity="few">تم حذف %d أغانٍ</item>
+        <item quantity="many">تم حذف %d أغنية</item>
+        <item quantity="other">تم حذف %d أغنية</item>
+    </plurals>
+    <string name="delete_partial">تم حذف %1$d من %2$d أغنية</string>
+
 </resources>

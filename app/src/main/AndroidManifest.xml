@@ -167,6 +167,7 @@
         <!-- Deletes a song through the system's own permission prompt; no screen -->
         <activity
             android:name=".DeleteActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|layoutDirection|locale"
             android:exported="false"
             android:excludeFromRecents="true"
             android:noHistory="true"

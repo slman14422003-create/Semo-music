@@ -85,6 +85,16 @@ public class PlaylistActivity extends AppCompatActivity implements TrackAdapter.
             }
 
             @Override
+            public float getSwipeThreshold(@NonNull RecyclerView.ViewHolder vh) {
+                return 0.5f;
+            }
+
+            @Override
+            public float getSwipeEscapeVelocity(float defaultValue) {
+                return defaultValue * 1.6f;
+            }
+
+            @Override
             public void clearView(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder vh) {
                 super.clearView(r, vh);
                 saveOrder();

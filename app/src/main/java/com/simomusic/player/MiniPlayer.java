@@ -116,6 +116,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
             public boolean onTouch(View v, android.view.MotionEvent e) {
                 switch (e.getActionMasked()) {
                     case android.view.MotionEvent.ACTION_DOWN:
+                        animate().cancel();      // a spring-back still running must not fight the finger
                         setPressed(true);
                         x0 = e.getRawX();
                         y0 = e.getRawY();

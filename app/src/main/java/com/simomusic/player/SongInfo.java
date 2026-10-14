@@ -130,6 +130,19 @@ public final class SongInfo {
                     b.setGravity(Gravity.CENTER);
                     body.addView(b);
                 }
+                if (Semo.hasNotes(c)) {
+                    final String note = t.title + " - " + t.artist
+                            + (t.album != null && !t.album.isEmpty() ? "\n" + t.album : "");
+                    android.widget.Button nb = Ui.pill(c, R.string.eco_save_note, 0, false, v -> {
+                        Semo.sendToNotes(c, t.title, note);
+                        d.dismiss();
+                    });
+                    LinearLayout.LayoutParams np = Ui.lp(-1, Ui.dp(c, 52));
+                    np.topMargin = Ui.dp(c, 10);
+                    nb.setLayoutParams(np);
+                    nb.setGravity(Gravity.CENTER);
+                    body.addView(nb);
+                }
             });
         }).start();
     }

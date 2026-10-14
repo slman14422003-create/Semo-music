@@ -51,6 +51,9 @@
     <!-- Android 11+ package visibility: the intents this app resolves or launches -->
     <queries>
         <intent>
+            <action android:name="app.semo.ECOSYSTEM" />
+        </intent>
+        <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="audio/*" />
         </intent>
@@ -86,6 +89,10 @@
         android:usesCleartextTraffic="true"
         android:theme="@style/AppTheme">
 
+        <!-- Semo ecosystem: what this app is, so the other Semo apps can find and use it -->
+        <meta-data android:name="app.semo.ROLE" android:value="music" />
+
+
         <activity
             android:name=".MainActivity"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density"
@@ -94,6 +101,10 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="app.semo.ECOSYSTEM" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- "Music" app picker (CATEGORY_APP_MUSIC) and the old MUSIC_PLAYER action -->
             <intent-filter>

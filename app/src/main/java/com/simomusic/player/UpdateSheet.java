@@ -87,11 +87,13 @@ public final class UpdateSheet {
             if (err != 0 || info == null) {
                 body.addView(line(c, errorText(c, err), R.color.text_primary, 16));
                 body.addView(button(c, R.string.upd_retry, false, v -> check(c, body, alive, cancel)));
+                addEco(c, body);
                 return;
             }
             if (!info.newer) {
                 body.addView(line(c, c.getString(R.string.upd_latest, Updater.current(c)), R.color.text_primary, 16));
                 body.addView(button(c, R.string.upd_check_again, false, v -> check(c, body, alive, cancel)));
+                addEco(c, body);
                 return;
             }
             available(c, body, info, alive, cancel);
@@ -118,6 +120,25 @@ public final class UpdateSheet {
             body.addView(nt);
         }
         body.addView(button(c, R.string.upd_download, true, v -> startDownload(c, body, info, alive, cancel)));
+        addEco(c, body);
+    }
+
+    /** The other Semo apps on this phone (version + tap to open): the four apps feel like one family. */
+    private static void addEco(final Context c, LinearLayout body) {
+        TextView h = line(c, c.getString(R.string.eco_title), R.color.text_secondary, 13);
+        h.setTypeface(Typeface.DEFAULT_BOLD);
+        h.setPadding(0, Ui.dp(c, 22), 0, Ui.dp(c, 4));
+        body.addView(h);
+        java.util.List<Semo.Sibling> list = Semo.siblings(c);
+        if (list.isEmpty()) {
+            body.addView(line(c, c.getString(R.string.eco_none), R.color.text_primary, 14));
+            return;
+        }
+        for (final Semo.Sibling s : list) {
+            TextView t = line(c, s.label + "  ·  " + s.version + " (" + s.code + ")", R.color.text_primary, 15);
+            t.setOnClickListener(v -> Semo.open(c, s.pkg));
+            body.addView(t);
+        }
     }
 
     private static void startDownload(final Context c, final LinearLayout body, final Updater.Info info,

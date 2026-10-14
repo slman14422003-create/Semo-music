@@ -367,4 +367,10 @@
     </plurals>
     <string name="delete_partial">تم حذف %1$d من %2$d أغنية</string>
 
+
+    <!-- Semo ecosystem -->
+    <string name="eco_title">منظومة Semo · المس لفتح التطبيق</string>
+    <string name="eco_none">لا توجد تطبيقات Semo أخرى مثبّتة على هذا الهاتف</string>
+    <string name="eco_show_files">إظهار في الملفات</string>
+    <string name="eco_link">فتح الصور والأغاني في تطبيقات Semo</string>
 </resources>

@@ -1,11 +1,6 @@
-# Baseline profile: the app's own code and the libraries it leans on while starting and scrolling are compiled ahead
-# of time on install, so the first launch, the first list scroll and the first player open are as smooth as the tenth.
-HSPLcom/simomusic/player/**;->**(**)**
-HSPLandroidx/recyclerview/widget/**;->**(**)**
-HSPLandroidx/appcompat/**;->**(**)**
-HSPLandroidx/core/view/**;->**(**)**
-HSPLandroidx/dynamicanimation/**;->**(**)**
-HSPLandroidx/media3/session/MediaController**;->**(**)**
-Lcom/simomusic/player/**;
+# Baseline profile: precompile this app's own code at install time so the first launch and the first scrolls are smooth.
+HSPLcom/simomusic/player/**->**(**)**
+HSPLcom/simomusic/player/**-><init>(**)V
 Landroidx/recyclerview/widget/**;
-Landroidx/dynamicanimation/**;
+HSPLandroidx/recyclerview/widget/**->**(**)**
+HSPLandroidx/appcompat/widget/**->**(**)**

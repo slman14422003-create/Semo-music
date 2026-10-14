@@ -117,6 +117,19 @@ public final class SongInfo {
                 if (!x.name.isEmpty()) BtSheet.addFact(c, facts, R.string.si_file, x.name);
                 if (!x.folder.isEmpty()) BtSheet.addFact(c, facts, R.string.si_folder, x.folder);
                 body.addView(facts);
+                if (!x.folder.isEmpty() && Semo.hasFiles(c)) {
+                    final String abs = x.folder.startsWith("/") ? x.folder
+                            : new java.io.File(android.os.Environment.getExternalStorageDirectory(), x.folder).getAbsolutePath();
+                    android.widget.Button b = Ui.pill(c, R.string.eco_show_files, 0, false, v -> {
+                        Semo.showInFiles(c, abs);
+                        d.dismiss();
+                    });
+                    LinearLayout.LayoutParams bp = Ui.lp(-1, Ui.dp(c, 52));
+                    bp.topMargin = Ui.dp(c, 14);
+                    b.setLayoutParams(bp);
+                    b.setGravity(Gravity.CENTER);
+                    body.addView(b);
+                }
             });
         }).start();
     }

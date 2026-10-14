@@ -343,4 +343,10 @@
     </plurals>
     <string name="delete_partial">%1$d of %2$d songs deleted</string>
 
+
+    <!-- Semo ecosystem -->
+    <string name="eco_title">Semo apps · tap to open</string>
+    <string name="eco_none">No other Semo apps are installed on this phone</string>
+    <string name="eco_show_files">Show in Files</string>
+    <string name="eco_link">Open photos and songs in Semo apps</string>
 </resources>

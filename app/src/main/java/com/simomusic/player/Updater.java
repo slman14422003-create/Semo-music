@@ -110,6 +110,8 @@ public final class Updater {
             HttpURLConnection c = null;
             try {
                 c = open("https://api.github.com/repos/" + REPO + "/releases/latest");
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(12000);
                 int code = c.getResponseCode();
                 if (code == 404) {
                     err = E_NONE;

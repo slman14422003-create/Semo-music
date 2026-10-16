@@ -136,8 +136,9 @@ public final class NowPlaying implements Player.Listener {
                 pendingSeek = -1;
                 lastTick = s.getProgress() / 5000;
                 Ui.gestureStart(s);
-                cur.setTextColor(Ui.color(c, R.color.accent_text));
-                cur.animate().scaleX(1.18f).scaleY(1.18f).setDuration(Motion.FAST).start();
+                cur.setPivotX(cur.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? cur.getWidth() : 0f);
+                cur.setPivotY(cur.getHeight() / 2f);
+                cur.animate().scaleX(1.12f).scaleY(1.12f).setDuration(Motion.FAST).start();
                 if (s.getParent() != null) s.getParent().requestDisallowInterceptTouchEvent(true);
             }
 
@@ -146,7 +147,6 @@ public final class NowPlaying implements Player.Listener {
                 drag = false;
                 seek.setDragging(false);
                 Ui.gestureEnd(s);
-                cur.setTextColor(Ui.color(c, R.color.text_secondary));
                 cur.animate().scaleX(1f).scaleY(1f).setDuration(Motion.FAST).start();
                 MediaController m = Pb.get();
                 if (m != null) {

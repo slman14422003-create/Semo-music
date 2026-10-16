@@ -34,3 +34,6 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 # Conventions
 - No comments in new code, no Arabic text inside Java files (Arabic only in values-ar/strings.xml).
 - Do not create README.md.
+
+# Seek time label
+- NowPlaying: elapsed-time label no longer changes color while scrubbing and scales from its start edge (pivot) so it is never clipped at the screen edge.

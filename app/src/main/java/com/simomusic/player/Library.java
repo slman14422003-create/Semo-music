@@ -34,6 +34,7 @@ public final class Library {
     /** Every folder that holds at least one recognised audio file, regardless of the hide-folder setting in Settings. */
     public static volatile List<String> allFolders = new ArrayList<>();
 
+    public static volatile Context app;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final ExecutorService EX = Executors.newSingleThreadExecutor();
     private static final List<Runnable> WAITERS = new ArrayList<>();
@@ -128,6 +129,7 @@ public final class Library {
     }
 
     private static void read(Context c) {
+        app = c;
         long gen = -1;
         if (Build.VERSION.SDK_INT >= 30) {
             try {
@@ -143,6 +145,7 @@ public final class Library {
         if (access) {
             Set<String> allowed = Store.enabledExts(c);
             long minMs = Store.minDur(c) * 1000L;
+            boolean smart = Store.smartFilter(c);
             boolean relPath = Build.VERSION.SDK_INT >= 29;
             String pathCol = relPath ? MediaStore.Audio.Media.RELATIVE_PATH : MediaStore.Audio.Media.DATA;
             String[] proj = {MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST,
@@ -165,13 +168,14 @@ public final class Library {
                             continue;
                         }
                         if (dur < minMs) continue;
+                        String folder = folderOf(q.getString(7), relPath);
+                        if (smart && Junk.is(name, folder, dur)) continue;
                         long id = q.getLong(0);
                         String title = Fmt.title(q.getString(1), dot > 0 ? name.substring(0, dot) : name);
                         String artist = q.getString(2);
                         if (artist == null || "<unknown>".equals(artist)) artist = "";
                         else artist = Fmt.fix(artist);
                         String album = q.getString(3) == null ? "" : Fmt.fix(q.getString(3));
-                        String folder = folderOf(q.getString(7), relPath);
                         seenFolders.add(folder);
                         out.add(new Track(id, ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id),
                                 title, artist, album, ext, dur, q.getLong(5), folder));
@@ -267,33 +271,76 @@ public final class Library {
         });
     }
 
-    /** Cached sorted view of the library (do not modify). Modes: 0 title, 1 artist, 2 recently added, 3 duration. */
     public static synchronized List<Track> sorted(int mode) {
-        if (sortedCache != null && sortedMode == mode) return sortedCache;
+        boolean live = (mode & 15) >= 5;
+        if (!live && sortedCache != null && sortedMode == mode) return sortedCache;
         List<Track> l = new ArrayList<>(tracks);
         sort(l, mode);
-        sortedCache = l;
-        sortedMode = mode;
+        if (!live) {
+            sortedCache = l;
+            sortedMode = mode;
+        }
         return l;
     }
 
-    public static void sort(List<Track> l, int mode) {
+    private static int blank(String a, String b) {
+        boolean ea = a.isEmpty(), eb = b.isEmpty();
+        if (ea == eb) return 0;
+        return ea ? 1 : -1;
+    }
+
+    public static void sort(List<Track> l, int encoded) {
+        int mode = encoded & 15;
+        boolean reverse = (encoded & 16) != 0;
         final Collator col = Collator.getInstance();
+        col.setStrength(Collator.PRIMARY);
+        final Comparator<Track> byTitle = (a, b) -> col.compare(Norm.sortKey(a.title), Norm.sortKey(b.title));
         Comparator<Track> cmp;
         switch (mode) {
             case 1:
-                cmp = (a, b) -> col.compare(a.artist, b.artist);
+                cmp = (a, b) -> {
+                    int e = blank(a.artist, b.artist);
+                    if (e != 0) return e;
+                    int r = col.compare(Norm.sortKey(a.artist), Norm.sortKey(b.artist));
+                    return r != 0 ? r : byTitle.compare(a, b);
+                };
                 break;
             case 2:
-                cmp = (a, b) -> Long.compare(b.added, a.added);
+                cmp = (a, b) -> {
+                    int r = Long.compare(b.added, a.added);
+                    return r != 0 ? r : byTitle.compare(a, b);
+                };
                 break;
             case 3:
-                cmp = (a, b) -> Long.compare(b.duration, a.duration);
+                cmp = (a, b) -> {
+                    int r = Long.compare(b.duration, a.duration);
+                    return r != 0 ? r : byTitle.compare(a, b);
+                };
+                break;
+            case 4:
+                cmp = (a, b) -> {
+                    int e = blank(a.album, b.album);
+                    if (e != 0) return e;
+                    int r = col.compare(Norm.sortKey(a.album), Norm.sortKey(b.album));
+                    return r != 0 ? r : byTitle.compare(a, b);
+                };
+                break;
+            case 5:
+            case 6:
+                if (app != null) {
+                    List<Track> ranked = AiEngine.rank(app, l, mode);
+                    l.clear();
+                    l.addAll(ranked);
+                    if (reverse) Collections.reverse(l);
+                    return;
+                }
+                cmp = byTitle;
                 break;
             default:
-                cmp = (a, b) -> col.compare(a.title, b.title);
+                cmp = byTitle;
         }
         Collections.sort(l, cmp);
+        if (reverse) Collections.reverse(l);
     }
 
     /** Takes songs out of the in-memory library right after they were deleted from the phone. */

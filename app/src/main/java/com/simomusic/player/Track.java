@@ -19,6 +19,6 @@ public final class Track {
         this.duration = duration;
         this.added = added;
         this.folder = folder == null ? "" : folder;
-        this.key = (title + " " + artist + " " + album).toLowerCase();
+        this.key = Norm.fold(title + " " + artist + " " + album);
     }
 }

@@ -81,6 +81,22 @@ public final class Store {
         return prefs(c).getInt("sort", 0);
     }
 
+    public static int sortMode(Context c) {
+        return sort(c) & 15;
+    }
+
+    public static boolean sortReverse(Context c) {
+        return (sort(c) & 16) != 0;
+    }
+
+    public static boolean smartFilter(Context c) {
+        return flag(c, "smart_filter", true);
+    }
+
+    public static boolean autoplay(Context c) {
+        return flag(c, "autoplay", true);
+    }
+
     public static void setSort(Context c, int s) {
         prefs(c).edit().putInt("sort", s).apply();
     }

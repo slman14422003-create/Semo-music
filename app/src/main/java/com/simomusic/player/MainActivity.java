@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private int tab = 0;
     private boolean animateNext = true;
     private String query = "";
+    private String[] queryTokens = new String[0];
     private final android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable searchRefresh = this::refresh;
     private List<Track> shown = new ArrayList<>();
@@ -181,13 +182,19 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView title = Ui.text(this, getString(R.string.app_name), 34, R.color.text_primary);
         title.setTypeface(Ui.titleFace(false));
+        title.setOnClickListener(v -> {
+            if (rv != null) rv.smoothScrollToPosition(0);
+        });
         subtitle = Ui.text(this, "", 13, R.color.text_secondary);
         titles.addView(title);
         titles.addView(subtitle);
         bar.addView(titles, Ui.weight(1));
         View[] btns = {
                 Ui.icon(this, R.drawable.ic_search, R.string.search, v -> toggleSearch()),
-                Ui.icon(this, R.drawable.ic_sort, R.string.sort_by, v -> Menus.sort(this, this::refresh)),
+                Ui.icon(this, R.drawable.ic_sort, R.string.sort_by, v -> Menus.sort(this, () -> {
+                    animateNext = true;
+                    refresh();
+                })),
                 Ui.icon(this, R.drawable.ic_settings, R.string.settings, v -> Ui.go(this, new Intent(this, SettingsActivity.class)))};
         for (View v : btns) {
             ((LinearLayout.LayoutParams) v.getLayoutParams()).setMarginStart(Ui.dp(this, 8));
@@ -212,7 +219,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
             @Override
             public void afterTextChanged(Editable e) {
-                query = e.toString().trim().toLowerCase(Locale.getDefault());
+                query = e.toString().trim();
+                queryTokens = Norm.tokens(query);
                 // debounced: filtering a big library on every keystroke was a real source of typing lag
                 searchHandler.removeCallbacks(searchRefresh);
                 searchHandler.postDelayed(searchRefresh, 150);
@@ -396,6 +404,10 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
     private void playAll(boolean shuffle) {
         if (shown.isEmpty()) return;
+        if (shuffle && Store.aiEnabled(this)) {
+            Pb.play(this, AiEngine.smartShuffle(this, shown), 0, false);
+            return;
+        }
         Pb.play(this, shown, shuffle ? -1 : 0, shuffle);
     }
 
@@ -424,7 +436,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         int total = Library.tracks.size();
         if (!query.isEmpty()) {
             List<Track> f = new ArrayList<>();
-            for (Track t : all) if (t.key.contains(query)) f.add(t);
+            for (Track t : all) if (Norm.matches(t.key, queryTokens)) f.add(t);
             all = f;
         }
         shown = all;
@@ -612,7 +624,26 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                 R.string.delete, true, () -> DeleteActivity.start(this, pick));
     }
 
-    /** Row 0 is "New playlist", then Favorites and the user's playlists. */
+    private int[] mixKinds() {
+        return Store.aiEnabled(this)
+                ? new int[]{AiEngine.MIX_NOW, AiEngine.MIX_TOP, AiEngine.MIX_RECENT, AiEngine.MIX_FORGOTTEN, AiEngine.MIX_NEW}
+                : new int[]{AiEngine.MIX_NEW};
+    }
+
+    private static final int[] MIX_TITLE = {R.string.mix_now, R.string.mix_top, R.string.mix_recent, R.string.mix_forgotten, R.string.mix_new};
+    private static final int[] MIX_SUB = {R.string.mix_now_sub, R.string.mix_top_sub, R.string.mix_recent_sub, R.string.mix_forgotten_sub, R.string.mix_new_sub};
+    private static final int[] MIX_ICON = {R.drawable.ic_ai, R.drawable.ic_star, R.drawable.ic_timer, R.drawable.ic_heart, R.drawable.ic_refresh};
+
+    private void playMix(int kind) {
+        List<Track> l = AiEngine.mix(this, kind);
+        if (l.isEmpty()) {
+            Ui.toast(this, R.string.mix_empty);
+            return;
+        }
+        Pb.play(this, l, 0, false);
+    }
+
+    /** Row 0 is "New playlist", then the smart mixes, then Favorites and the user's playlists. */
     private final class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         @NonNull
         @Override
@@ -627,6 +658,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             ViewGroup f = (ViewGroup) h.itemView;
             f.removeAllViews();
             int n = getItemCount();
+            int[] kinds = mixKinds();
             View row;
             if (pos == 0) {
                 row = Ui.settingRow(MainActivity.this, R.drawable.ic_add, getString(R.string.new_playlist), null, null, false,
@@ -635,8 +667,13 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                             refresh();
                         }));
                 Ui.shape(MainActivity.this, row.findViewById(R.id.card), true, n == 1, R.color.accent_soft);
+            } else if (pos <= kinds.length) {
+                final int kind = kinds[pos - 1];
+                row = Ui.settingRow(MainActivity.this, MIX_ICON[kind], getString(MIX_TITLE[kind]), getString(MIX_SUB[kind]),
+                        null, false, v -> playMix(kind));
+                Ui.shape(MainActivity.this, row.findViewById(R.id.card), false, pos == n - 1, R.color.accent_soft);
             } else {
-                final Store.Playlist pl = Store.playlists(MainActivity.this).get(pos - 1);
+                final Store.Playlist pl = Store.playlists(MainActivity.this).get(pos - 1 - kinds.length);
                 int cnt = Library.count(pl.ids);
                 int ic = Store.FAV.equals(pl.id) ? R.drawable.ic_heart_fill
                         : Store.AI.equals(pl.id) ? R.drawable.ic_ai : R.drawable.ic_list;
@@ -653,7 +690,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
         @Override
         public int getItemCount() {
-            return Store.playlists(MainActivity.this).size() + 1;
+            return Store.playlists(MainActivity.this).size() + 1 + mixKinds().length;
         }
     }
 }

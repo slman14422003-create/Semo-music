@@ -193,6 +193,11 @@ public class SettingsActivity extends AppCompatActivity {
         col.addView(new View(this), new LinearLayout.LayoutParams(1, Ui.dp(this, 10)));
         LinearLayout lib = group(col);
         lib.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.set_min_dur), minLabel(), null, false, v -> pickMin()));
+        lib.addView(Ui.toggleRow(this, getString(R.string.smart_filter), getString(R.string.smart_filter_sub),
+                Store.smartFilter(this), (v, on) -> {
+                    Store.setFlag(this, "smart_filter", on);
+                    Library.scan(this, null);
+                }));
         lib.addView(Ui.settingRow(this, R.drawable.ic_folder, getString(R.string.hide_folders), hiddenLabel(), null, false, v -> pickHiddenFolders()));
         lib.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.rescan), getString(R.string.rescan_sub), null, false, v -> {
             Library.scan(this, () -> Ui.toast(this,
@@ -228,6 +233,8 @@ public class SettingsActivity extends AppCompatActivity {
         LinearLayout pb = group(col);
         pb.addView(Ui.toggleRow(this, getString(R.string.skip_silence), getString(R.string.skip_silence_sub),
                 Store.flag(this, "skip_silence", false), (v, on) -> Store.setFlag(this, "skip_silence", on)));
+        pb.addView(Ui.toggleRow(this, getString(R.string.autoplay_title), getString(R.string.autoplay_sub),
+                Store.autoplay(this), (v, on) -> Store.setFlag(this, "autoplay", on)));
         pb.addView(Ui.toggleRow(this, getString(R.string.resume_title), getString(R.string.resume_sub),
                 Store.flag(this, "resume", true), (v, on) -> Store.setFlag(this, "resume", on)));
         pb.addView(Ui.toggleRow(this, getString(R.string.stop_close_title), getString(R.string.stop_close_sub),

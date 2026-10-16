@@ -24,6 +24,11 @@ public final class PlayStats {
     public static final class Row {
         public int plays, skips;
         public long lastPlayed; // epoch seconds
+        public final int[] part = new int[4];
+    }
+
+    public static int bucket(int hour) {
+        return hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
     }
 
     private static Map<Long, Row> cache;
@@ -48,6 +53,7 @@ public final class PlayStats {
                 r.plays = a.getInt(0);
                 r.skips = a.getInt(1);
                 r.lastPlayed = a.getLong(2);
+                for (int i = 0; i < 4 && a.length() > 3 + i; i++) r.part[i] = a.getInt(3 + i);
                 cache.put(Long.parseLong(k), r);
             }
         } catch (JSONException | NumberFormatException ignored) {
@@ -67,6 +73,7 @@ public final class PlayStats {
                 a.put(e.getValue().plays);
                 a.put(e.getValue().skips);
                 a.put(e.getValue().lastPlayed);
+                for (int v : e.getValue().part) a.put(v);
                 root.put(String.valueOf(e.getKey()), a);
             }
         } catch (JSONException ignored) {
@@ -91,7 +98,9 @@ public final class PlayStats {
         load(c);
         Row r = row(id);
         r.lastPlayed = System.currentTimeMillis() / 1000;
-        hours[Calendar.getInstance().get(Calendar.HOUR_OF_DAY)]++;
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        hours[hour]++;
+        r.part[bucket(hour)]++;
         save(c);
     }
 

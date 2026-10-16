@@ -256,6 +256,12 @@ public class PlayerService extends MediaSessionService {
                 if (id >= 0) PlayStats.started(PlayerService.this, id);
             }
         });
+        player.addListener(new Player.Listener() {
+            @Override
+            public void onMediaItemTransition(androidx.media3.common.MediaItem item, int reason) {
+                extendQueue();
+            }
+        });
         // tapping the media notification opens the app itself with the full player up, so back / close land in the app
         PendingIntent open = PendingIntent.getActivity(this, 0, MainActivity.openPlayerIntent(this),
                 PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
@@ -269,6 +275,34 @@ public class PlayerService extends MediaSessionService {
         f.addAction(Intent.ACTION_USER_PRESENT);
         ContextCompat.registerReceiver(this, screen, f, ContextCompat.RECEIVER_NOT_EXPORTED);
         Store.prefs(this).registerOnSharedPreferenceChangeListener(prefs);
+    }
+
+    private void extendQueue() {
+        try {
+            if (!Store.autoplay(this) || player.getRepeatMode() != Player.REPEAT_MODE_OFF || player.getShuffleModeEnabled()) return;
+            int count = player.getMediaItemCount(), index = player.getCurrentMediaItemIndex();
+            if (count < 2 || count - index > 2) return;
+            androidx.media3.common.MediaItem cur = player.getCurrentMediaItem();
+            if (cur == null) return;
+            Track seed = Library.byId.get(Long.parseLong(cur.mediaId));
+            if (seed == null) return;
+            java.util.Set<Long> have = new java.util.HashSet<>();
+            for (int i = 0; i < count; i++) {
+                try {
+                    have.add(Long.parseLong(player.getMediaItemAt(i).mediaId));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            java.util.List<androidx.media3.common.MediaItem> add = new java.util.ArrayList<>();
+            for (Track t : AiEngine.similar(this, seed, 80)) {
+                if (have.contains(t.id)) continue;
+                add.add(Pb.item(t));
+                if (add.size() >= 10) break;
+            }
+            if (!add.isEmpty()) player.addMediaItems(add);
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("autoplay", e);
+        }
     }
 
     @Override

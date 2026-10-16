@@ -350,4 +350,27 @@
     <string name="eco_show_files">Show in Files</string>
     <string name="eco_save_note">Save to Notes</string>
     <string name="eco_link">Open photos and songs in Semo apps</string>
+    <string name="sort_album">Album</string>
+    <string name="sort_most_played">Most played</string>
+    <string name="sort_for_now">For right now</string>
+    <string name="sort_order">Direction</string>
+    <string name="order_default">Default</string>
+    <string name="order_reverse">Reversed</string>
+    <string name="mix_now">For this time of day</string>
+    <string name="mix_now_sub">Songs you tend to play around now</string>
+    <string name="mix_top">Most played</string>
+    <string name="mix_top_sub">Your all-time favorites by plays</string>
+    <string name="mix_recent">Played recently</string>
+    <string name="mix_recent_sub">Pick up where you left off</string>
+    <string name="mix_forgotten">Forgotten favorites</string>
+    <string name="mix_forgotten_sub">Songs you love but have not heard in a while</string>
+    <string name="mix_new">Just added</string>
+    <string name="mix_new_sub">The newest songs on your phone</string>
+    <string name="mix_empty">Not enough listening history yet</string>
+    <string name="radio_start">Start radio from this song</string>
+    <string name="radio_started">Playing similar songs</string>
+    <string name="smart_filter">Hide system and keyboard sounds</string>
+    <string name="smart_filter_sub">Keeps short clicks and effects that are not songs out of your library</string>
+    <string name="autoplay_title">Autoplay similar songs</string>
+    <string name="autoplay_sub">When the queue is about to end, songs similar to what you were hearing are added</string>
 </resources>

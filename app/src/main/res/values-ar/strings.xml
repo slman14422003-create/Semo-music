@@ -374,4 +374,27 @@
     <string name="eco_show_files">إظهار في الملفات</string>
     <string name="eco_save_note">حفظ في الملاحظات</string>
     <string name="eco_link">فتح الصور والأغاني في تطبيقات Semo</string>
+    <string name="sort_album">الألبوم</string>
+    <string name="sort_most_played">الأكثر تشغيلًا</string>
+    <string name="sort_for_now">المناسب الآن</string>
+    <string name="sort_order">الاتجاه</string>
+    <string name="order_default">الافتراضي</string>
+    <string name="order_reverse">معكوس</string>
+    <string name="mix_now">مناسب لوقتك الآن</string>
+    <string name="mix_now_sub">أغانٍ تميل لتشغيلها في مثل هذا الوقت</string>
+    <string name="mix_top">الأكثر تشغيلًا</string>
+    <string name="mix_top_sub">أغانيك الأعلى استماعًا على الإطلاق</string>
+    <string name="mix_recent">استمعت إليها مؤخرًا</string>
+    <string name="mix_recent_sub">أكمل من حيث توقفت</string>
+    <string name="mix_forgotten">مفضلات منسية</string>
+    <string name="mix_forgotten_sub">أغانٍ تحبها ولم تسمعها منذ فترة</string>
+    <string name="mix_new">أُضيفت حديثًا</string>
+    <string name="mix_new_sub">أحدث الأغاني على هاتفك</string>
+    <string name="mix_empty">لا يوجد سجل استماع كافٍ بعد</string>
+    <string name="radio_start">بدء راديو من هذه الأغنية</string>
+    <string name="radio_started">جارٍ تشغيل أغانٍ مشابهة</string>
+    <string name="smart_filter">إخفاء أصوات النظام والكيبورد</string>
+    <string name="smart_filter_sub">يُبعد النقرات والمؤثرات القصيرة التي ليست أغاني عن مكتبتك</string>
+    <string name="autoplay_title">تشغيل تلقائي لأغانٍ مشابهة</string>
+    <string name="autoplay_sub">عند اقتراب نهاية القائمة تُضاف أغانٍ تشبه ما كنت تسمعه</string>
 </resources>

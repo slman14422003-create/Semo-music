@@ -29,6 +29,13 @@ public final class Menus {
                 Pb.enqueue(c, t);
                 Ui.toast(c, R.string.added_queue);
             }));
+            l.add(Sheet.item(R.drawable.ic_ai, c.getString(R.string.radio_start), false, false, () -> {
+                List<Track> radio = new ArrayList<>();
+                radio.add(t);
+                radio.addAll(AiEngine.similar(c, t, 40));
+                Pb.play(c, radio, 0, false);
+                Ui.toast(c, R.string.radio_started);
+            }));
             l.add(Sheet.divider());
             l.add(Sheet.item(R.drawable.ic_add, c.getString(R.string.add_to_playlist), false, false, () -> addToPlaylist(c, t.id, changed)));
             boolean fav = Store.has(c, Store.FAV, t.id);
@@ -75,13 +82,22 @@ public final class Menus {
     }
 
     public static void sort(final Context c, final Runnable changed) {
-        final int[] names = {R.string.sort_title, R.string.sort_artist, R.string.sort_recent, R.string.sort_duration};
+        final int[] all = {R.string.sort_title, R.string.sort_artist, R.string.sort_recent, R.string.sort_duration,
+                R.string.sort_album, R.string.sort_most_played, R.string.sort_for_now};
+        final int n = Store.aiEnabled(c) ? all.length : 5;
         Sheet.show(c, c.getString(R.string.sort_by), () -> {
             List<Sheet.Item> l = new ArrayList<>();
-            CharSequence[] labels = new CharSequence[names.length];
-            for (int i = 0; i < names.length; i++) labels[i] = c.getString(names[i]);
-            l.add(Sheet.chips(labels, Store.sort(c), 2, m -> {
-                Store.setSort(c, m);
+            CharSequence[] labels = new CharSequence[n];
+            for (int i = 0; i < n; i++) labels[i] = c.getString(all[i]);
+            int cur = Store.sortMode(c);
+            l.add(Sheet.chips(labels, cur < n ? cur : -1, 3, m -> {
+                Store.setSort(c, m | (Store.sortReverse(c) ? 16 : 0));
+                changed.run();
+            }));
+            l.add(Sheet.divider());
+            CharSequence[] dir = {c.getString(R.string.order_default), c.getString(R.string.order_reverse)};
+            l.add(Sheet.chips(dir, Store.sortReverse(c) ? 1 : 0, 2, i -> {
+                Store.setSort(c, Store.sortMode(c) | (i == 1 ? 16 : 0));
                 changed.run();
             }));
             return l;

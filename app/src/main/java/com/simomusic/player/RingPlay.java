@@ -119,6 +119,6 @@ public final class RingPlay extends View {
             icon.draw(cv);
             cv.restore();
         }
-        if (playing || easing) postInvalidateOnAnimation();
+        if ((playing || easing) && !Gest.busy) postInvalidateOnAnimation();
     }
 }

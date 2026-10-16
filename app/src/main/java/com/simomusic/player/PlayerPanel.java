@@ -270,8 +270,19 @@ public final class PlayerPanel extends FrameLayout {
     private void layer(boolean on) {
         int want = on ? LAYER_TYPE_HARDWARE : LAYER_TYPE_NONE;
         if (getLayerType() != want) setLayerType(want, null);
-        // the content column fades and scales while the sheet moves: drawn once into its own layer, not re-composited per frame
-        if (col.getLayerType() != want) col.setLayerType(want, null);
+        if (col.getLayerType() != LAYER_TYPE_NONE) col.setLayerType(LAYER_TYPE_NONE, null);
+        if (Gest.busy != on) {
+            Gest.busy = on;
+            if (!on) poke(act.getWindow().getDecorView());
+        }
+    }
+
+    private static void poke(View v) {
+        v.invalidate();
+        if (v instanceof android.view.ViewGroup) {
+            android.view.ViewGroup g = (android.view.ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) poke(g.getChildAt(i));
+        }
     }
 
     /** The sheet can be grabbed when open, and also while it is still animating (open or closed). */
@@ -308,7 +319,7 @@ public final class PlayerPanel extends FrameLayout {
         f = Math.max(0f, Math.min(1f, f));
         setAlpha(Math.min(1f, f / 0.22f));
         col.setAlpha(Math.max(0f, Math.min(1f, (f - 0.18f) / 0.6f)));
-        float nr = maxRadius * (1f - f);
+        float nr = maxRadius * Math.min(1f, (1f - f) * 6f);
         if (nr != radius && (Math.abs(nr - radius) > 0.6f || nr < 0.01f || nr > maxRadius - 0.01f)) {
             radius = nr;
             invalidateOutline();
@@ -412,7 +423,7 @@ public final class PlayerPanel extends FrameLayout {
             case MotionEvent.ACTION_MOVE:
                 vtAdd(e);
                 if (!tracking && canGrab() && !onSeek) {
-                    if (Gest.down(e.getRawX() - downX, e.getRawY() - downY, slop)) {
+                    if (Gest.downLoose(e.getRawX() - downX, e.getRawY() - downY, slop)) {
                         startTracking(e);
                         return true;
                     }
@@ -455,7 +466,7 @@ public final class PlayerPanel extends FrameLayout {
                 vtAdd(e);
                 if (!tracking) {
                     float dy = e.getRawY() - downY, dx = e.getRawX() - downX;
-                    if (canGrab() && Gest.down(dx, dy, slop)) startTracking(e);
+                    if (canGrab() && Gest.downLoose(dx, dy, slop)) startTracking(e);
                     return true;
                 }
                 setTranslationY(Math.max(0f, Math.min(collapsedY, e.getRawY() - startRaw)));

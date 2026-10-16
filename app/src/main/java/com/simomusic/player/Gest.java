@@ -15,6 +15,12 @@ public final class Gest {
         return Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy) * 1.15f;
     }
 
+    public static volatile boolean busy;
+
+    public static boolean downLoose(float dx, float dy, int slop) {
+        return dy > slop && dy > Math.abs(dx) * 0.7f;
+    }
+
     public static boolean down(float dx, float dy, int slop) {
         return dy > slop && dy > Math.abs(dx) * 1.1f;
     }

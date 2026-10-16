@@ -20,6 +20,10 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - PlayerService.extendQueue: autoplay similar songs near the end of the queue (setting "autoplay", default on, skipped for shuffle/repeat).
 - Home: tapping the title scrolls to top; Shuffle uses smartShuffle when AI Mix is on.
 
+# Drag smoothness fix (full player)
+- Gest.busy is true while PlayerPanel moves (drag or spring). WavePainter, EqView and RingPlay stop their per-frame invalidation while it is true, so the panel layer and home layer are not re-rendered every frame. PlayerPanel.layer(false) clears it and pokes all views to restart animations.
+- PlayerPanel: nested col layer removed, corner radius only animates in the first part of the drag, drag-down detection uses Gest.downLoose (diagonal drags count).
+
 # Ideas not done yet
 - Fast-scroll letter bubble on the song list.
 - Crossfade between songs.

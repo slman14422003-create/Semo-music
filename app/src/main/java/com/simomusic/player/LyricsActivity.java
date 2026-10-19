@@ -484,7 +484,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
             lyrics = n;
             LyricsRepo.store(getApplicationContext(), currentKey, n);
             setActive(pos);
-            Ui.toast(this, R.string.lyrics_adjusted);
+            if (l.anchors == null) Ui.toast(this, R.string.lyrics_adjusted);
         } else {
             m.seekTo(l.times[pos]);
             setActive(pos);

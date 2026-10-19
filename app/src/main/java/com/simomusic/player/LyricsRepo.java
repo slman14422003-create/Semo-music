@@ -43,54 +43,118 @@ public final class LyricsRepo {
         public final String[] lines;
         public final String source;
         public final boolean estimated;
+        public final Anchors anchors;
 
         Lyrics(boolean synced, boolean instrumental, long[] times, String[] lines, String source) {
-            this(synced, instrumental, times, lines, source, false);
+            this(synced, instrumental, times, lines, source, false, null);
         }
 
-        Lyrics(boolean synced, boolean instrumental, long[] times, String[] lines, String source, boolean estimated) {
+        Lyrics(boolean synced, boolean instrumental, long[] times, String[] lines, String source, boolean estimated, Anchors anchors) {
             this.synced = synced;
             this.instrumental = instrumental;
             this.times = times;
             this.lines = lines;
             this.source = source;
             this.estimated = estimated;
+            this.anchors = anchors;
+        }
+    }
+
+    public static final class Anchors {
+        public final int[] idx;
+        public final long[] pos;
+        public final double mul;
+
+        Anchors(int[] idx, long[] pos, double mul) {
+            this.idx = idx;
+            this.pos = pos;
+            this.mul = mul;
         }
     }
 
     public static Lyrics estimate(Lyrics l, long durMs) {
         if (l == null || l.synced || l.instrumental || durMs < 20000 || l.lines.length < 4) return l;
-        int n = l.lines.length;
-        double[] w = new double[n];
-        double total = 0;
-        for (int i = 0; i < n; i++) {
-            w[i] = l.lines[i].isEmpty() ? 6 : Math.max(12, l.lines[i].length());
-            total += w[i];
-        }
-        long start = (long) (durMs * 0.07), end = (long) (durMs * 0.94);
+        return build(l.lines, null, durMs, l.source);
+    }
+
+    private static Lyrics build(String[] lines, Anchors an, long durMs, String source) {
+        int n = lines.length;
+        double[] cum = new double[n + 1];
+        for (int i = 0; i < n; i++) cum[i + 1] = cum[i] + (lines[i].isEmpty() ? 6 : Math.max(12, lines[i].length()));
+        double total = cum[n];
+        long start0 = (long) (durMs * 0.07), end0 = (long) (durMs * 0.94);
+        double base = (end0 - start0) / total;
         long[] t = new long[n];
-        double acc = 0;
-        for (int i = 0; i < n; i++) {
-            t[i] = start + (long) ((end - start) * (acc / total));
-            acc += w[i];
+        if (an == null || an.idx.length == 0) {
+            for (int i = 0; i < n; i++) t[i] = start0 + Math.round(base * cum[i]);
+        } else {
+            int k = an.idx.length;
+            double rate = base;
+            if (k >= 2) {
+                double span = an.pos[k - 1] - an.pos[0];
+                double ws = cum[an.idx[k - 1]] - cum[an.idx[0]];
+                if (ws > 0 && span > 0) rate = Math.max(base * 0.4, Math.min(base * 2.5, span / ws));
+            }
+            rate = rate * an.mul;
+            int i0 = an.idx[0];
+            long p0 = an.pos[0];
+            if (i0 > 0) {
+                double lead = cum[i0];
+                long st = Math.max(0, Math.round(p0 - lead * rate));
+                for (int i = 0; i < i0; i++) t[i] = st + Math.round((p0 - st) * (cum[i] / lead));
+            }
+            for (int a = 0; a < k; a++) {
+                int ia = an.idx[a];
+                long pa = an.pos[a];
+                if (a + 1 < k) {
+                    int ib = an.idx[a + 1];
+                    long pb = an.pos[a + 1];
+                    double seg = cum[ib] - cum[ia];
+                    for (int i = ia; i < ib; i++) t[i] = pa + Math.round((pb - pa) * ((cum[i] - cum[ia]) / seg));
+                } else {
+                    for (int i = ia; i < n; i++) t[i] = pa + Math.round(rate * (cum[i] - cum[ia]));
+                    long limit = (long) (durMs * 0.98);
+                    if (n - 1 > ia && t[n - 1] > limit && limit > pa) {
+                        double f = (double) (limit - pa) / (t[n - 1] - pa);
+                        for (int i = ia + 1; i < n; i++) t[i] = pa + Math.round((t[i] - pa) * f);
+                    }
+                }
+            }
+            for (int i = 1; i < n; i++) {
+                if (t[i] < t[i - 1] + 300) t[i] = t[i - 1] + 300;
+            }
         }
-        return new Lyrics(true, false, t, l.lines, l.source, true);
+        return new Lyrics(true, false, t, lines, source, true, an);
     }
 
     public static Lyrics anchored(Lyrics l, int idx, long posMs, long durMs) {
-        int n = l.times.length;
-        long[] old = l.times;
-        long[] t = new long[n];
-        long first = old[0], at = old[idx], lastOld = old[n - 1];
-        long base = Math.max(0, Math.min(first, posMs - idx * 1500L));
-        for (int i = 0; i < idx; i++) {
-            t[i] = at > first ? base + (old[i] - first) * (posMs - base) / (at - first) : base;
+        java.util.TreeMap<Integer, Long> m = new java.util.TreeMap<>();
+        double mul = 1;
+        if (l.anchors != null) {
+            for (int i = 0; i < l.anchors.idx.length; i++) m.put(l.anchors.idx[i], l.anchors.pos[i]);
+            mul = l.anchors.mul;
         }
-        long lastNew = Math.max(lastOld, posMs + (n - idx) * 1500L);
-        for (int i = idx; i < n; i++) {
-            t[i] = lastOld > at ? posMs + (old[i] - at) * (lastNew - posMs) / (lastOld - at) : posMs + (i - idx) * 1500L;
+        Long prev = m.get(idx);
+        if (prev != null) {
+            if (posMs > prev + 400) mul = Math.min(2.0, mul * 1.15);
+            else if (posMs < prev - 400) mul = Math.max(0.6, mul / 1.15);
         }
-        return new Lyrics(true, false, t, l.lines, "manual", true);
+        java.util.Iterator<java.util.Map.Entry<Integer, Long>> it = m.entrySet().iterator();
+        while (it.hasNext()) {
+            java.util.Map.Entry<Integer, Long> e = it.next();
+            if (e.getKey() < idx && e.getValue() >= posMs) it.remove();
+            else if (e.getKey() > idx && e.getValue() <= posMs) it.remove();
+        }
+        m.put(idx, posMs);
+        int[] ix = new int[m.size()];
+        long[] ps = new long[m.size()];
+        int c = 0;
+        for (java.util.Map.Entry<Integer, Long> e : m.entrySet()) {
+            ix[c] = e.getKey();
+            ps[c] = e.getValue();
+            c++;
+        }
+        return build(l.lines, new Anchors(ix, ps, mul), durMs, "manual");
     }
 
     public static void store(Context c, String key, Lyrics l) {
@@ -529,7 +593,21 @@ public final class LyricsRepo {
             String raw = o.optString("raw", "");
             if (o.optBoolean("synced", false)) {
                 LrcParser.Result r = LrcParser.parse(raw);
-                if (r != null) return new Lyrics(true, false, r.times, r.lines, o.optString("src", ""), o.optBoolean("est", false));
+                if (r != null) {
+                    Anchors an = null;
+                    JSONArray ar = o.optJSONArray("anch");
+                    if (ar != null && ar.length() > 0) {
+                        int[] ix = new int[ar.length()];
+                        long[] ps = new long[ar.length()];
+                        for (int i = 0; i < ar.length(); i++) {
+                            JSONArray e = ar.getJSONArray(i);
+                            ix[i] = e.getInt(0);
+                            ps[i] = e.getLong(1);
+                        }
+                        an = new Anchors(ix, ps, o.optDouble("mul", 1));
+                    }
+                    return new Lyrics(true, false, r.times, r.lines, o.optString("src", ""), o.optBoolean("est", false), an);
+                }
             } else {
                 String[] lines = LrcParser.plain(raw);
                 if (lines.length > 0) return new Lyrics(false, false, new long[0], lines, o.optString("src", ""));
@@ -557,6 +635,17 @@ public final class LyricsRepo {
             o.put("instrumental", l.instrumental);
             o.put("src", l.source);
             o.put("est", l.estimated);
+            if (l.anchors != null) {
+                JSONArray ar = new JSONArray();
+                for (int i = 0; i < l.anchors.idx.length; i++) {
+                    JSONArray e = new JSONArray();
+                    e.put(l.anchors.idx[i]);
+                    e.put(l.anchors.pos[i]);
+                    ar.put(e);
+                }
+                o.put("anch", ar);
+                o.put("mul", l.anchors.mul);
+            }
             o.put("at", System.currentTimeMillis());
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < l.lines.length; i++) {

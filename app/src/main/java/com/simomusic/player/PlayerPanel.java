@@ -86,7 +86,6 @@ public final class PlayerPanel extends FrameLayout {
         addView(scrim, new LayoutParams(-1, -1));
 
         col = new LinearLayout(d);
-        col.setHasOverlappingRendering(false);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(Ui.dp(a, 22), Ui.dp(a, 8), Ui.dp(a, 22), Ui.dp(a, 18));
 

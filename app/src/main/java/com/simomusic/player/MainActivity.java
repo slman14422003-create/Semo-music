@@ -257,7 +257,6 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         rv.setClipToPadding(false);
         rv.setPadding(0, Ui.dp(this, 4), 0, Ui.dp(this, 8));
         rv.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        rv.setHasOverlappingRendering(false);
         rv.setHasFixedSize(true);
         rv.setItemViewCacheSize(12);
         rv.getRecycledViewPool().setMaxRecycledViews(0, 24);   // rows are costly to build: keep more of them ready while flinging
@@ -279,7 +278,6 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         }));
         body.addView(srl, new FrameLayout.LayoutParams(-1, -1));
         skeleton = Ui.skeleton(this);
-        skeleton.setHasOverlappingRendering(false);
         skeleton.setVisibility(View.GONE);
         body.addView(skeleton, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
         pulse = android.animation.ObjectAnimator.ofFloat(skeleton, "alpha", 0.45f, 1f);

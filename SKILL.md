@@ -60,3 +60,8 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Softener: band-pass at 6.5 kHz (Q 1) subtracted with factor k (max 0.55) when the band peak exceeds 30 percent of the full-signal peak; x - k*bp(x) can never boost any frequency (checked numerically), music that is not harsh stays at k near 0. Mono path writes r = l afterwards.
 - Contour level comes from STREAM_MUSIC volume: 0 at 55 percent volume and above, 1 at 10 percent and below, rounded to 0.05. BtAudio.volPoll checks the volume once a second and re-applies params when it changes. Settings keys bt_contour and bt_smooth, both default on, toggles in BtSheet, strings in values and values-ar.
 - Not verified on a device (no compiler in the sandbox).
+
+# Build fix: setHasOverlappingRendering
+- View has no setHasOverlappingRendering method (only the protected-style override hasOverlappingRendering()), so the release compile failed with 5 errors in MainActivity (rv, skeleton), LockActivity, NowPlaying, PlayerPanel. All five calls removed; nothing else changed.
+- If the offscreen-buffer optimisation is wanted again, override hasOverlappingRendering() to return false in a small View subclass instead of calling a setter.
+- Not verified on a device or with a compiler (none in the sandbox): rerun the GitHub Actions build.

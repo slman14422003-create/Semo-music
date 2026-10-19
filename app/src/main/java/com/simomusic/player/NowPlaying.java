@@ -80,7 +80,6 @@ public final class NowPlaying implements Player.Listener {
         c = ctx;
         artPx = Ui.dp(c, artSizeDp);
         art = Ui.artView(c, artSizeDp, lock ? 36 : 32);
-        art.setHasOverlappingRendering(false);
 
         info = new LinearLayout(c);
         info.setOrientation(LinearLayout.VERTICAL);

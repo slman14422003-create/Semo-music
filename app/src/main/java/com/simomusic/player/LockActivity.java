@@ -273,7 +273,6 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         for (View v : movers()) {
             if (v == null) continue;
             v.animate().cancel();
-            v.setHasOverlappingRendering(false);
             v.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         }
     }

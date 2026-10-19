@@ -541,11 +541,11 @@ public final class Ui {
                     moving[0] = st[1] != 0f;
                     if (vt[0] != null) vt[0].recycle();
                     vt[0] = android.view.VelocityTracker.obtain();
-                    vt[0].addMovement(e);
+                    Gest.feed(vt[0], e);
                     return true;
                 case android.view.MotionEvent.ACTION_MOVE: {
                     if (vt[0] == null) return false;
-                    vt[0].addMovement(e);
+                    Gest.feed(vt[0], e);
                     float dy = e.getRawY() - st[0];
                     if (!moving[0] && Math.abs(dy) < slop) return true;
                     moving[0] = true;
@@ -556,7 +556,7 @@ public final class Ui {
                 case android.view.MotionEvent.ACTION_UP:
                 case android.view.MotionEvent.ACTION_CANCEL: {
                     if (vt[0] == null) return false;
-                    vt[0].addMovement(e);
+                    Gest.feed(vt[0], e);
                     vt[0].computeCurrentVelocity(1000);
                     float vy = vt[0].getYVelocity();
                     vt[0].recycle();

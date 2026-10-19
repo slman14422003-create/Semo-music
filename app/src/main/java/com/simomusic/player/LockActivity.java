@@ -305,11 +305,11 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                     y0[0] = e.getRawY();
                     if (vt[0] != null) vt[0].recycle();
                     vt[0] = android.view.VelocityTracker.obtain();
-                    vt[0].addMovement(e);
+                    Gest.feed(vt[0], e);
                     return true;
                 case MotionEvent.ACTION_MOVE: {
                     if (vt[0] == null) return true;
-                    vt[0].addMovement(e);
+                    Gest.feed(vt[0], e);
                     float raw = e.getRawY() - y0[0];
                     if (!dragLive) {
                         if (Math.abs(raw) < slop) return true;
@@ -331,7 +331,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                 case MotionEvent.ACTION_CANCEL: {
                     float vy = 0f;
                     if (vt[0] != null) {
-                        vt[0].addMovement(e);
+                        Gest.feed(vt[0], e);
                         vt[0].computeCurrentVelocity(1000);
                         vy = vt[0].getYVelocity();
                         vt[0].recycle();

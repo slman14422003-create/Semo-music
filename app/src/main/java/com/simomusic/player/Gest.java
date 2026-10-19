@@ -1,6 +1,8 @@
 package com.simomusic.player;
 
 import android.content.Context;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
@@ -15,6 +17,13 @@ public final class Gest {
 
     public static boolean horizontal(float dx, float dy, int slop) {
         return Math.abs(dx) > slop && Math.abs(dx) > Math.abs(dy) * 1.15f;
+    }
+
+    public static void feed(VelocityTracker t, MotionEvent e) {
+        MotionEvent c = MotionEvent.obtain(e);
+        c.setLocation(e.getRawX(), e.getRawY());
+        t.addMovement(c);
+        c.recycle();
     }
 
     public static volatile boolean busy;

@@ -102,3 +102,9 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Resume.restore: the id list is built on Bg.query and Pb.restore (which needs a looper) is called back on the UI thread.
 - Art.FX has 2 threads (colour pick and backdrop blur no longer wait for each other).
 - Not verified on a device (no compiler in the sandbox).
+
+# Player sheet refused to close (wrong finger speed)
+- Cause: every VelocityTracker was fed with event.getX/getY, which are in the local coordinates of the view that receives the event. The sheet, the cover and the mini player move with the finger while they are dragged, so their local coordinates barely change and the measured speed was close to zero (or jumped on the last event): a fast swipe was judged as a slow short one and the sheet sprang back open.
+- Gest.feed(tracker, event) copies the event, sets its location to getRawX/getRawY and feeds the tracker. All 14 addMovement calls (PlayerPanel sheet and cover swipe, MiniPlayer, LockActivity, Ui) now use it.
+- Effect: fast swipe down closes the player, fast cover swipe changes the song with a small distance, mini player flicks and lock screen flings use the real finger speed.
+- Not verified on a device (no compiler in the sandbox).

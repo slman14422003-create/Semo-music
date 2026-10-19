@@ -164,11 +164,11 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
                         h.postDelayed(longPress, 450);
                         if (vt != null) vt.recycle();
                         vt = VelocityTracker.obtain();
-                        vt.addMovement(e);
+                        Gest.feed(vt, e);
                         return true;
                     case MotionEvent.ACTION_MOVE: {
                         if (vt == null || longFired) return true;
-                        vt.addMovement(e);
+                        Gest.feed(vt, e);
                         float dx = e.getRawX() - x0, dy = e.getRawY() - y0;
                         if (!moved && (Math.abs(dx) > slop || Math.abs(dy) > slop)) {
                             moved = true;
@@ -227,7 +227,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
                             return true;
                         }
                         if (vt == null) return false;
-                        vt.addMovement(e);
+                        Gest.feed(vt, e);
                         vt.computeCurrentVelocity(1000);
                         float vx = vt.getXVelocity(), vy = vt.getYVelocity();
                         vt.recycle();

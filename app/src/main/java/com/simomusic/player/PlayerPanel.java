@@ -408,14 +408,14 @@ public final class PlayerPanel extends FrameLayout {
     private void vtReset(MotionEvent e) {
         if (vt != null) vt.recycle();
         vt = VelocityTracker.obtain();
-        vt.addMovement(e);
+        Gest.feed(vt, e);
         vtLast = e.getEventTime();
     }
 
     private void vtAdd(MotionEvent e) {
         if (vt == null || e.getEventTime() == vtLast) return;
         vtLast = e.getEventTime();
-        vt.addMovement(e);
+        Gest.feed(vt, e);
     }
 
     private void cancelChildren(MotionEvent e) {
@@ -577,11 +577,11 @@ public final class PlayerPanel extends FrameLayout {
                         }
                         v.animate().cancel();       // a spring-back in progress must not fight the finger
                         t = VelocityTracker.obtain();
-                        t.addMovement(e);
+                        Gest.feed(t, e);
                         return true;
                     case MotionEvent.ACTION_MOVE: {
                         if (t == null) return false;
-                        t.addMovement(e);
+                        Gest.feed(t, e);
                         float dx = e.getRawX() - x0, dy = e.getRawY() - y0;
                         if (!drag && Gest.horizontal(dx, dy, slop)) {
                             drag = true;
@@ -607,7 +607,7 @@ public final class PlayerPanel extends FrameLayout {
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_CANCEL: {
                         if (t == null) return false;
-                        t.addMovement(e);
+                        Gest.feed(t, e);
                         t.computeCurrentVelocity(1000);
                         float vx = t.getXVelocity();
                         t.recycle();

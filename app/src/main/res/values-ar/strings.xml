@@ -420,4 +420,6 @@
     <string name="lyrics_size_s">صغير</string>
     <string name="lyrics_size_m">متوسط</string>
     <string name="lyrics_size_l">كبير</string>
+    <string name="lyrics_estimated">تزامن تقديري. اضغط على السطر الذي يُغنّى الآن لتصحيحه، واضغط مطولاً على سطر للانتقال إليه</string>
+    <string name="lyrics_adjusted">تم ضبط التزامن</string>
 </resources>

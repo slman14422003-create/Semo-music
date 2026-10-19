@@ -114,3 +114,4 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - LyricsRepo: runs on its own 2-thread executor ("lyrics"). Source 1 LRCLIB (/api/get then /api/search variants, best match by title / artist / duration), source 2 lyrics.ovh (plain text). Results cached in files/lyrics (json) plus an in-memory LRU, misses are remembered for 12 h. Host can be swapped with pref "lyrics_host" (for a proxy).
 - LrcParser: multi-timestamp lines, offset tag, enhanced word tags stripped, empty lines become a note symbol.
 - Title / artist cleaning (brackets, feat., track numbers, "Artist - Title" in the title) happens in LyricsRepo.Query.of.
+- Plain-only lyrics are turned into estimated sync (LyricsRepo.estimate: lines weighted by length over the song duration). Tapping the line being sung re-anchors the timings (LyricsRepo.anchored) and stores them in the cache as "manual"; long-press seeks to that line.

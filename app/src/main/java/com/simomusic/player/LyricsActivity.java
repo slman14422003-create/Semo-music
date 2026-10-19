@@ -181,6 +181,8 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         badge = Ui.text(d, getString(R.string.lyrics_not_synced), 12, R.color.text_secondary);
         badge.setPadding(Ui.dp(d, 12), Ui.dp(d, 5), Ui.dp(d, 12), Ui.dp(d, 5));
         badge.setBackgroundResource(R.drawable.bg_pill_glass);
+        badge.setGravity(Gravity.CENTER);
+        badge.setMaxWidth(Ui.dp(d, 320));
         badge.setVisibility(View.GONE);
         FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         bp.topMargin = Ui.dp(d, 6);
@@ -354,6 +356,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
     }
 
     private void apply(LyricsRepo.Lyrics l, int status) {
+        if (l != null && !l.synced && !l.instrumental && l.lines.length > 0) l = LyricsRepo.estimate(l, durMs);
         lyrics = l;
         if (l != null && l.instrumental) {
             showState(S_INSTR);
@@ -369,7 +372,8 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         int idx = l.synced ? indexFor(pos + LOOKAHEAD) : -1;
         active = idx;
         following = true;
-        badge.setVisibility(l.synced ? View.GONE : View.VISIBLE);
+        badge.setText(l.estimated ? R.string.lyrics_estimated : R.string.lyrics_not_synced);
+        badge.setVisibility(l.estimated || !l.synced ? View.VISIBLE : View.GONE);
         ad.set(l.lines, l.synced);
         rv.setAlpha(0f);
         if (idx >= 0) {
@@ -466,16 +470,25 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         rv.requestLayout();
     }
 
-    private void seekToLine(int pos) {
+    private void seekToLine(int pos, boolean forceSeek) {
         MediaController m = Pb.get();
         LyricsRepo.Lyrics l = lyrics;
         if (m == null || l == null || !l.synced || pos < 0 || pos >= l.times.length) return;
-        m.seekTo(l.times[pos]);
         Ui.confirm(rv);
         h.removeCallbacks(resume);
         following = true;
         showPill(false);
-        setActive(pos);
+        if (l.estimated && !forceSeek) {
+            long now = Math.max(0, m.getCurrentPosition());
+            LyricsRepo.Lyrics n = LyricsRepo.anchored(l, pos, now, durMs);
+            lyrics = n;
+            LyricsRepo.store(getApplicationContext(), currentKey, n);
+            setActive(pos);
+            Ui.toast(this, R.string.lyrics_adjusted);
+        } else {
+            m.seekTo(l.times[pos]);
+            setActive(pos);
+        }
         centerOn(pos, true);
     }
 
@@ -686,7 +699,14 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
             final VH vh = new VH(tv);
             tv.setOnClickListener(v -> {
                 int pos = vh.getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && synced) seekToLine(pos);
+                if (pos != RecyclerView.NO_POSITION && synced) seekToLine(pos, false);
+            });
+            tv.setOnLongClickListener(v -> {
+                int pos = vh.getBindingAdapterPosition();
+                LyricsRepo.Lyrics cur = lyrics;
+                if (pos == RecyclerView.NO_POSITION || cur == null || !cur.estimated) return false;
+                seekToLine(pos, true);
+                return true;
             });
             return vh;
         }

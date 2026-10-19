@@ -42,14 +42,61 @@ public final class LyricsRepo {
         public final long[] times;
         public final String[] lines;
         public final String source;
+        public final boolean estimated;
 
         Lyrics(boolean synced, boolean instrumental, long[] times, String[] lines, String source) {
+            this(synced, instrumental, times, lines, source, false);
+        }
+
+        Lyrics(boolean synced, boolean instrumental, long[] times, String[] lines, String source, boolean estimated) {
             this.synced = synced;
             this.instrumental = instrumental;
             this.times = times;
             this.lines = lines;
             this.source = source;
+            this.estimated = estimated;
         }
+    }
+
+    public static Lyrics estimate(Lyrics l, long durMs) {
+        if (l == null || l.synced || l.instrumental || durMs < 20000 || l.lines.length < 4) return l;
+        int n = l.lines.length;
+        double[] w = new double[n];
+        double total = 0;
+        for (int i = 0; i < n; i++) {
+            w[i] = l.lines[i].isEmpty() ? 6 : Math.max(12, l.lines[i].length());
+            total += w[i];
+        }
+        long start = (long) (durMs * 0.07), end = (long) (durMs * 0.94);
+        long[] t = new long[n];
+        double acc = 0;
+        for (int i = 0; i < n; i++) {
+            t[i] = start + (long) ((end - start) * (acc / total));
+            acc += w[i];
+        }
+        return new Lyrics(true, false, t, l.lines, l.source, true);
+    }
+
+    public static Lyrics anchored(Lyrics l, int idx, long posMs, long durMs) {
+        int n = l.times.length;
+        long[] old = l.times;
+        long[] t = new long[n];
+        long first = old[0], at = old[idx], lastOld = old[n - 1];
+        long base = Math.max(0, Math.min(first, posMs - idx * 1500L));
+        for (int i = 0; i < idx; i++) {
+            t[i] = at > first ? base + (old[i] - first) * (posMs - base) / (at - first) : base;
+        }
+        long lastNew = Math.max(lastOld, posMs + (n - idx) * 1500L);
+        for (int i = idx; i < n; i++) {
+            t[i] = lastOld > at ? posMs + (old[i] - at) * (lastNew - posMs) / (lastOld - at) : posMs + (i - idx) * 1500L;
+        }
+        return new Lyrics(true, false, t, l.lines, "manual", true);
+    }
+
+    public static void store(Context c, String key, Lyrics l) {
+        final Context app = c.getApplicationContext();
+        MEM.put(key, l);
+        EX.execute(() -> writeCache(app, key, l));
     }
 
     public interface Cb {
@@ -482,7 +529,7 @@ public final class LyricsRepo {
             String raw = o.optString("raw", "");
             if (o.optBoolean("synced", false)) {
                 LrcParser.Result r = LrcParser.parse(raw);
-                if (r != null) return new Lyrics(true, false, r.times, r.lines, o.optString("src", ""));
+                if (r != null) return new Lyrics(true, false, r.times, r.lines, o.optString("src", ""), o.optBoolean("est", false));
             } else {
                 String[] lines = LrcParser.plain(raw);
                 if (lines.length > 0) return new Lyrics(false, false, new long[0], lines, o.optString("src", ""));
@@ -509,6 +556,7 @@ public final class LyricsRepo {
             o.put("synced", l.synced);
             o.put("instrumental", l.instrumental);
             o.put("src", l.source);
+            o.put("est", l.estimated);
             o.put("at", System.currentTimeMillis());
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < l.lines.length; i++) {

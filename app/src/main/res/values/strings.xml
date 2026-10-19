@@ -396,4 +396,6 @@
     <string name="lyrics_size_s">Small</string>
     <string name="lyrics_size_m">Medium</string>
     <string name="lyrics_size_l">Large</string>
+    <string name="lyrics_estimated">Estimated sync. Tap the line being sung to correct it, long-press a line to jump to it</string>
+    <string name="lyrics_adjusted">Sync adjusted</string>
 </resources>

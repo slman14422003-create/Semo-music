@@ -377,4 +377,23 @@
     <string name="smart_filter_sub">Keeps short clicks and effects that are not songs out of your library</string>
     <string name="autoplay_title">Autoplay similar songs</string>
     <string name="autoplay_sub">When the queue is about to end, songs similar to what you were hearing are added</string>
+    <string name="lyrics">Lyrics</string>
+    <string name="lyrics_loading">Looking for lyrics…</string>
+    <string name="lyrics_none">No lyrics found</string>
+    <string name="lyrics_none_sub">Try searching with the artist and the song title</string>
+    <string name="lyrics_offline">No internet connection</string>
+    <string name="lyrics_offline_sub">Lyrics are saved after the first time, so they open without internet later</string>
+    <string name="lyrics_instrumental">Instrumental</string>
+    <string name="lyrics_instrumental_sub">This track has no lyrics</string>
+    <string name="lyrics_empty">Nothing is playing</string>
+    <string name="lyrics_empty_sub">Play a song to see its lyrics</string>
+    <string name="lyrics_retry">Try again</string>
+    <string name="lyrics_search_manual">Search manually</string>
+    <string name="lyrics_search_hint">Artist - Song title</string>
+    <string name="lyrics_reload">Reload lyrics</string>
+    <string name="lyrics_sync">Follow song</string>
+    <string name="lyrics_not_synced">Not time-synced</string>
+    <string name="lyrics_size_s">Small</string>
+    <string name="lyrics_size_m">Medium</string>
+    <string name="lyrics_size_l">Large</string>
 </resources>

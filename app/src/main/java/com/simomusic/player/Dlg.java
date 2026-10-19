@@ -127,10 +127,14 @@ public final class Dlg {
     }
 
     public static void input(final Context c, int titleRes, String initial, int okRes, final Consumer<String> ok) {
+        input(c, titleRes, R.string.playlist_name, initial, okRes, ok);
+    }
+
+    public static void input(final Context c, int titleRes, int hintRes, String initial, int okRes, final Consumer<String> ok) {
         if (dead(c)) return;
         LinearLayout[] h = new LinearLayout[1];
         final Dialog d = base(c, c.getString(titleRes), null, h);
-        final EditText e = Ui.edit(c, c.getString(R.string.playlist_name), initial);
+        final EditText e = Ui.edit(c, c.getString(hintRes), initial);
         LinearLayout.LayoutParams ep = Ui.lp(-1, -2);
         ep.topMargin = Ui.dp(c, 16);
         e.setLayoutParams(ep);

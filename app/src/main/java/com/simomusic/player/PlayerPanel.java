@@ -108,6 +108,9 @@ public final class PlayerPanel extends FrameLayout {
         cap.setTypeface(Typeface.DEFAULT_BOLD);
         cap.setLetterSpacing(0.04f);
         top.addView(cap, Ui.weight(1));
+        ImageButton lyr = Ui.icon(d, R.drawable.ic_lyrics, R.string.lyrics, v -> Ui.go(a, new android.content.Intent(a, LyricsActivity.class)));
+        ((LinearLayout.LayoutParams) lyr.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
+        top.addView(lyr);
         top.addView(Ui.icon(d, R.drawable.ic_more, R.string.more, v -> Menus.more(a, this::refreshExtras)));
         col.addView(top, Ui.lp(-1, -2));
 

@@ -27,7 +27,7 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 # Ideas not done yet
 - Fast-scroll letter bubble on the song list.
 - Crossfade between songs.
-- Synced lyrics, sleep timer shake-to-extend, sections/headers per artist or album.
+- Sleep timer shake-to-extend, sections/headers per artist or album.
 - OpenActivity voice search still uses plain lowercase matching, could use Norm.
 - Replace notifyDataSetChanged in TrackAdapter.setData with a diff for smoother sort changes.
 
@@ -108,3 +108,9 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Gest.feed(tracker, event) copies the event, sets its location to getRawX/getRawY and feeds the tracker. All 14 addMovement calls (PlayerPanel sheet and cover swipe, MiniPlayer, LockActivity, Ui) now use it.
 - Effect: fast swipe down closes the player, fast cover swipe changes the song with a small distance, mini player flicks and lock screen flings use the real finger speed.
 - Not verified on a device (no compiler in the sandbox).
+
+# Lyrics (new)
+- LyricsActivity: own screen opened from the lyrics icon in the full player top row. Backdrop from cover, centered lines, active line full opacity with neighbours fading by distance, smooth centering scroller, tap a line to seek, manual scroll pauses follow and shows a "follow" pill that resumes after 3.6 s, draggable progress bar, prev / play / next, text size chips and manual search in the more sheet.
+- LyricsRepo: runs on its own 2-thread executor ("lyrics"). Source 1 LRCLIB (/api/get then /api/search variants, best match by title / artist / duration), source 2 lyrics.ovh (plain text). Results cached in files/lyrics (json) plus an in-memory LRU, misses are remembered for 12 h. Host can be swapped with pref "lyrics_host" (for a proxy).
+- LrcParser: multi-timestamp lines, offset tag, enhanced word tags stripped, empty lines become a note symbol.
+- Title / artist cleaning (brackets, feat., track numbers, "Artist - Title" in the title) happens in LyricsRepo.Query.of.

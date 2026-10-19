@@ -194,6 +194,10 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density|uiMode"
             android:exported="false"
             android:theme="@style/Theme.App.Player" />
+        <activity
+            android:name=".LyricsActivity"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density|uiMode"
+            android:exported="false" />
         <activity android:name=".PlaylistActivity" android:exported="false" />
         <activity android:name=".PickSongsActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".SettingsActivity" android:exported="false" />

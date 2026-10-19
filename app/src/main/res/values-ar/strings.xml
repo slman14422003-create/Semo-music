@@ -401,4 +401,23 @@
     <string name="smart_filter_sub">يُبعد النقرات والمؤثرات القصيرة التي ليست أغاني عن مكتبتك</string>
     <string name="autoplay_title">تشغيل تلقائي لأغانٍ مشابهة</string>
     <string name="autoplay_sub">عند اقتراب نهاية القائمة تُضاف أغانٍ تشبه ما كنت تسمعه</string>
+    <string name="lyrics">كلمات الأغنية</string>
+    <string name="lyrics_loading">جارٍ البحث عن الكلمات…</string>
+    <string name="lyrics_none">لم يتم العثور على كلمات</string>
+    <string name="lyrics_none_sub">جرّب البحث بالفنان واسم الأغنية</string>
+    <string name="lyrics_offline">لا يوجد اتصال بالإنترنت</string>
+    <string name="lyrics_offline_sub">تُحفظ الكلمات بعد أول مرة وتُفتح لاحقاً بدون إنترنت</string>
+    <string name="lyrics_instrumental">مقطوعة موسيقية</string>
+    <string name="lyrics_instrumental_sub">هذا المقطع بلا كلمات</string>
+    <string name="lyrics_empty">لا شيء قيد التشغيل</string>
+    <string name="lyrics_empty_sub">شغّل أغنية لتظهر كلماتها</string>
+    <string name="lyrics_retry">إعادة المحاولة</string>
+    <string name="lyrics_search_manual">بحث يدوي</string>
+    <string name="lyrics_search_hint">الفنان - اسم الأغنية</string>
+    <string name="lyrics_reload">إعادة جلب الكلمات</string>
+    <string name="lyrics_sync">تتبّع الأغنية</string>
+    <string name="lyrics_not_synced">غير متزامنة مع الأغنية</string>
+    <string name="lyrics_size_s">صغير</string>
+    <string name="lyrics_size_m">متوسط</string>
+    <string name="lyrics_size_l">كبير</string>
 </resources>

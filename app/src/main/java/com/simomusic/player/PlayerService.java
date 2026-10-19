@@ -1,6 +1,9 @@
 package com.simomusic.player;
 
 import android.app.KeyguardManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,6 +15,8 @@ import android.os.Looper;
 import android.os.PowerManager;
 
 import androidx.annotation.OptIn;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 import androidx.media3.common.AudioAttributes;
 import androidx.media3.common.C;
@@ -320,6 +325,78 @@ public class PlayerService extends MediaSessionService {
     }
 
     private boolean closing;
+
+    // ---------------------------------------------------------------- media buttons
+
+    /** Same id Media3 uses for its media notification, so its real notification simply replaces ours. */
+    private static final int FG_ID = 1001;
+    private static final String FG_CHANNEL = "semo_start";
+
+    /**
+     * A media button (quick-settings media card, Bluetooth, lock screen) reaches us through startForegroundService().
+     * Android kills the app if startForeground() is not called within seconds, and Media3 only does that once something
+     * is actually playing. So we always satisfy the rule first with a small placeholder notification.
+     */
+    private void ensureForeground() {
+        try {
+            NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null && android.os.Build.VERSION.SDK_INT >= 26 && nm.getNotificationChannel(FG_CHANNEL) == null) {
+                nm.createNotificationChannel(new NotificationChannel(FG_CHANNEL, getString(R.string.ch_playback),
+                        NotificationManager.IMPORTANCE_LOW));
+            }
+            Notification n = new NotificationCompat.Builder(this, FG_CHANNEL)
+                    .setSmallIcon(R.drawable.ic_notif)
+                    .setContentTitle(getString(R.string.app_name))
+                    .setOngoing(true)
+                    .setSilent(true)
+                    .build();
+            ServiceCompat.startForeground(this, FG_ID, n, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("ensure foreground", e);
+        }
+    }
+
+    /** A moment after a media button: if nothing ended up playing, drop the placeholder instead of leaving it behind. */
+    private final Runnable settleForeground = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (player == null || session == null || player.getMediaItemCount() == 0) {
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                    stopSelf();
+                } else if (!player.isPlaying() && !player.getPlayWhenReady()) {
+                    stopForeground(STOP_FOREGROUND_DETACH);
+                }
+            } catch (RuntimeException e) {
+                CrashGuard.nonFatal("settle foreground", e);
+            }
+        }
+    };
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        final boolean mediaButton = intent != null && Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction());
+        if (mediaButton) {
+            ensureForeground();
+            h.removeCallbacks(settleForeground);
+            h.postDelayed(settleForeground, 2500);
+        }
+        try {
+            return super.onStartCommand(intent, flags, startId);
+        } catch (RuntimeException e) {
+            // e.g. "session is already released": a stale button from a session we closed. Never crash for that.
+            CrashGuard.nonFatal("start command", e);
+            boolean playing = player != null && player.getPlayWhenReady();
+            if (mediaButton && !playing) {
+                try {
+                    stopForeground(STOP_FOREGROUND_REMOVE);
+                } catch (RuntimeException ignored) {
+                }
+            }
+            if (!playing) stopSelf();
+            return START_NOT_STICKY;
+        }
+    }
 
     /**
      * Swiping the app away from recents closes it completely (setting "Close fully when removed", on by default):

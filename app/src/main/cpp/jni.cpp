@@ -41,7 +41,7 @@ Java_com_simomusic_player_WhisperLib_nativeCancel(JNIEnv *, jclass) {
 // returns 0 on success
 JNIEXPORT jint JNICALL
 Java_com_simomusic_player_WhisperLib_nativeTranscribe(JNIEnv *env, jclass, jlong ptr, jfloatArray pcm,
-                                                      jint threads, jstring lang) {
+                                                      jint threads, jstring lang, jboolean words) {
     auto *ctx = (whisper_context *) ptr;
     g_cancel.store(false);
     g_text.clear();
@@ -64,9 +64,9 @@ Java_com_simomusic_player_WhisperLib_nativeTranscribe(JNIEnv *env, jclass, jlong
     wp.n_threads = threads;
     wp.no_context = true;
     wp.single_segment = false;
-    wp.token_timestamps = true;   // word-level times
-    wp.max_len = 1;               // one word per segment
-    wp.split_on_word = true;
+    wp.token_timestamps = words;  // word-level times (for syncing known lyrics)
+    wp.max_len = words ? 1 : 0;   // one word per segment, or natural phrases (for generating lyrics)
+    wp.split_on_word = words;
     wp.abort_callback = abort_cb;
     wp.abort_callback_user_data = nullptr;
 

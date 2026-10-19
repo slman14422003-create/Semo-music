@@ -407,4 +407,17 @@
     <string name="ai_sync_done">Lyrics synced</string>
     <string name="ai_sync_weak">Could not recognise enough of the song to sync it</string>
     <string name="ai_sync_failed">AI sync failed</string>
+    <string name="ai_gen_action">Write the lyrics with AI</string>
+    <string name="ai_gen_choose">Write lyrics from the song</string>
+    <string name="ai_gen_online">Online (accurate, free account) · uploads the song audio</string>
+    <string name="ai_gen_phone">On this phone (private, slower)</string>
+    <string name="ai_gen_key_title">Groq API key</string>
+    <string name="ai_gen_key_msg">The song audio is sent to Groq (groq.com) to be transcribed. Create a free key at console.groq.com and paste it here. It is saved on this phone only.</string>
+    <string name="ai_gen_key_hint">gsk_…</string>
+    <string name="ai_gen_working">Writing the lyrics from the song… this can take a minute</string>
+    <string name="ai_gen_done">Lyrics written and synced</string>
+    <string name="ai_gen_note">Written by AI from the song, so some words may be wrong</string>
+    <string name="ai_gen_bad_key">The API key was rejected. Check it and try again</string>
+    <string name="ai_gen_limit">Free limit reached for now. Try again later</string>
+    <string name="ai_gen_weak">Could not make out enough words in this song</string>
 </resources>

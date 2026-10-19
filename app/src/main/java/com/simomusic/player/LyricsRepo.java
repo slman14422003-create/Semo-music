@@ -282,10 +282,12 @@ public final class LyricsRepo {
                 }
                 if (hit == null) {
                     if (stale.getAsBoolean()) return;
+                    Lyrics prev = force ? readCache(app, q.key) : null;
                     int[] st = {MISS};
                     hit = fetch(app, q, stale, st);
                     status = st[0];
                     if (hit != null) writeCache(app, q.key, hit);
+                    else if (prev != null && "ai-gen".equals(prev.source)) hit = prev;   // keep what the AI wrote
                     else if (status == MISS) writeMiss(app, q.key);
                 }
                 if (hit != null) MEM.put(q.key, hit);

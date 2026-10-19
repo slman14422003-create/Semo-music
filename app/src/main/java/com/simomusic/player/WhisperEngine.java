@@ -105,6 +105,15 @@ public final class WhisperEngine implements SpeechEngine {
 
     @Override
     public List<LyricsAligner.Word> transcribe(Context c, short[] pcm, String lang) throws Exception {
+        return run(c, pcm, lang, true);
+    }
+
+    /** Natural phrases with start times: used to write lyrics from scratch. */
+    public List<LyricsAligner.Word> transcribePhrases(Context c, short[] pcm, String lang) throws Exception {
+        return run(c, pcm, lang, false);
+    }
+
+    private List<LyricsAligner.Word> run(Context c, short[] pcm, String lang, boolean words) throws Exception {
         synchronized (LOCK) {
             float[] f = new float[pcm.length];
             for (int i = 0; i < f.length; i++) f[i] = pcm[i] / 32768f;
@@ -112,7 +121,7 @@ public final class WhisperEngine implements SpeechEngine {
             if (ctx == 0) throw new IllegalStateException("model load failed");
             try {
                 int threads = Math.max(2, Math.min(4, Runtime.getRuntime().availableProcessors() - 2));
-                int rc = WhisperLib.nativeTranscribe(ctx, f, threads, lang);
+                int rc = WhisperLib.nativeTranscribe(ctx, f, threads, lang, words);
                 List<LyricsAligner.Word> out = new ArrayList<>();
                 if (rc != 0) return out;
                 int n = WhisperLib.nativeCount();

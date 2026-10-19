@@ -380,9 +380,10 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         boolean aiOk = WhisperEngine.supported() && !aiBusy && audioUri != null && l.lines.length >= 4
                 && (l.estimated || !l.synced) && !"ai".equals(l.source);
         String base = getString(l.estimated ? R.string.lyrics_estimated : R.string.lyrics_not_synced);
-        badge.setText(aiOk ? base + "\n" + getString(R.string.ai_sync_tap) : base);
+        boolean gen = "ai-gen".equals(l.source);
+        badge.setText(gen ? getString(R.string.ai_gen_note) : (aiOk ? base + "\n" + getString(R.string.ai_sync_tap) : base));
         badge.setClickable(aiOk);
-        badge.setVisibility(l.estimated || !l.synced ? View.VISIBLE : View.GONE);
+        badge.setVisibility(gen || l.estimated || !l.synced ? View.VISIBLE : View.GONE);
         ad.set(l.lines, l.synced);
         rv.setAlpha(0f);
         if (idx >= 0) {
@@ -406,14 +407,15 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setMessage(getString(R.string.ai_sync_download_q, WhisperEngine.MODEL_MB))
                 .setNegativeButton(android.R.string.cancel, null)
-                .setPositiveButton(R.string.ai_sync_download, (dlg, w) -> downloadThenSync(cur))
+                .setPositiveButton(R.string.ai_sync_download, (dlg, w) -> downloadThenRun(() -> runAiSync(cur)))
                 .show();
     }
 
-    private void downloadThenSync(LyricsRepo.Lyrics cur) {
+    private void downloadThenRun(Runnable next) {
         aiBusy = true;
         final String k = currentKey;
         badge.setClickable(false);
+        badge.setVisibility(View.VISIBLE);
         badge.setText(getString(R.string.ai_sync_downloading, 0));
         Thread t = new Thread(() -> {
             boolean ok = WhisperEngine.download(getApplicationContext(),
@@ -427,8 +429,12 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                 if (!ok) {
                     Ui.toast(this, R.string.ai_sync_dl_failed);
                     if (lyrics != null) apply(lyrics, LyricsRepo.OK);
-                } else if (k.equals(currentKey) && lyrics != null) {
-                    runAiSync(lyrics);
+                    else {
+                        badge.setVisibility(View.GONE);
+                        showState(S_MISS);
+                    }
+                } else if (k.equals(currentKey)) {
+                    next.run();
                 }
             });
         }, "whisper-dl");
@@ -453,6 +459,92 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                         Ui.toast(this, status == AiSync.WEAK ? R.string.ai_sync_weak : R.string.ai_sync_failed);
                         if (lyrics != null) apply(lyrics, LyricsRepo.OK);
                     }
+                });
+    }
+
+    // ------------------------------------------------------------------ AI lyrics (no lyrics found online)
+
+    private static final String KEY_PREF = "groq_key";
+
+    private void startGenerate() {
+        if (aiBusy || audioUri == null) return;
+        CharSequence[] items = {getString(R.string.ai_gen_online), getString(R.string.ai_gen_phone)};
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.ai_gen_choose)
+                .setItems(items, (dlg, which) -> {
+                    if (which == 0) generateOnline();
+                    else generateOnPhone();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void generateOnline() {
+        String key = Store.prefs(this).getString(KEY_PREF, "");
+        if (key != null && !key.trim().isEmpty()) {
+            runGenerate(key.trim());
+            return;
+        }
+        askKey();
+    }
+
+    private void askKey() {
+        final android.widget.EditText et = new android.widget.EditText(this);
+        et.setHint(R.string.ai_gen_key_hint);
+        et.setSingleLine(true);
+        et.setPadding(Ui.dp(this, 24), Ui.dp(this, 16), Ui.dp(this, 24), Ui.dp(this, 16));
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.ai_gen_key_title)
+                .setMessage(R.string.ai_gen_key_msg)
+                .setView(et)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok, (dlg, w) -> {
+                    String k = et.getText().toString().trim();
+                    if (k.isEmpty()) return;
+                    Store.prefs(this).edit().putString(KEY_PREF, k).apply();
+                    runGenerate(k);
+                })
+                .show();
+    }
+
+    private void generateOnPhone() {
+        if (!WhisperEngine.supported()) {
+            Ui.toast(this, R.string.ai_sync_failed);
+            return;
+        }
+        if (WhisperEngine.hasModel(this)) {
+            runGenerate(null);
+            return;
+        }
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setMessage(getString(R.string.ai_sync_download_q, WhisperEngine.MODEL_MB))
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.ai_sync_download, (dlg, w) -> downloadThenRun(() -> runGenerate(null)))
+                .show();
+    }
+
+    /** apiKey null = on this phone. Writes lyrics from the song itself and syncs them. */
+    private void runGenerate(String apiKey) {
+        aiBusy = true;
+        final String k = currentKey;
+        badge.setVisibility(View.GONE);
+        showState(S_LOAD);
+        Ui.toast(this, R.string.ai_gen_working);
+        AiLyrics.run(getApplicationContext(), k, audioUri, durMs, null, apiKey,
+                () -> isDestroyed() || !k.equals(currentKey), (l, status) -> {
+                    aiBusy = false;
+                    if (isDestroyed() || !k.equals(currentKey)) return;
+                    if (status == AiLyrics.DONE && l != null) {
+                        Ui.toast(this, R.string.ai_gen_done);
+                        apply(l, LyricsRepo.OK);
+                        return;
+                    }
+                    int msg = status == AiLyrics.BAD_KEY ? R.string.ai_gen_bad_key
+                            : status == AiLyrics.LIMIT ? R.string.ai_gen_limit
+                            : status == AiLyrics.WEAK ? R.string.ai_gen_weak : R.string.ai_sync_failed;
+                    if (status == AiLyrics.BAD_KEY) Store.prefs(this).edit().remove(KEY_PREF).apply();
+                    Ui.toast(this, msg);
+                    showState(S_MISS);
                 });
     }
 
@@ -678,6 +770,13 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
             rp.gravity = Gravity.CENTER_HORIZONTAL;
             rp.topMargin = Ui.dp(d, 22);
             stateBox.addView(row, rp);
+            if (type == S_MISS && audioUri != null) {
+                Button gen = Ui.pill(d, R.string.ai_gen_action, R.drawable.ic_ai, true, v -> startGenerate());
+                LinearLayout.LayoutParams gp = Ui.lp(-2, -2);
+                gp.gravity = Gravity.CENTER_HORIZONTAL;
+                gp.topMargin = Ui.dp(d, 12);
+                stateBox.addView(gen, gp);
+            }
         }
         stateBox.setAlpha(0f);
         stateBox.setVisibility(View.VISIBLE);

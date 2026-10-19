@@ -431,4 +431,17 @@
     <string name="ai_sync_done">تمت مزامنة الكلمات</string>
     <string name="ai_sync_weak">لم أستطع التعرف على كلمات كافية من الأغنية لمزامنتها</string>
     <string name="ai_sync_failed">فشلت المزامنة بالذكاء الاصطناعي</string>
+    <string name="ai_gen_action">كتابة الكلمات بالذكاء الاصطناعي</string>
+    <string name="ai_gen_choose">كتابة الكلمات من الأغنية</string>
+    <string name="ai_gen_online">أونلاين (دقيق، حساب مجاني) · يرفع صوت الأغنية</string>
+    <string name="ai_gen_phone">على هذا الهاتف (خاص، أبطأ)</string>
+    <string name="ai_gen_key_title">مفتاح Groq</string>
+    <string name="ai_gen_key_msg">يُرسل صوت الأغنية إلى Groq (groq.com) لتحويله إلى نص. أنشئ مفتاحاً مجانياً من console.groq.com والصقه هنا. يُحفظ على هذا الهاتف فقط.</string>
+    <string name="ai_gen_key_hint">gsk_…</string>
+    <string name="ai_gen_working">جارٍ كتابة الكلمات من الأغنية… قد تستغرق دقيقة</string>
+    <string name="ai_gen_done">تمت كتابة الكلمات ومزامنتها</string>
+    <string name="ai_gen_note">كتبها الذكاء الاصطناعي من الأغنية، فقد تحتوي أخطاء</string>
+    <string name="ai_gen_bad_key">تم رفض المفتاح. تأكد منه وحاول مرة أخرى</string>
+    <string name="ai_gen_limit">وصلت للحد المجاني حالياً. حاول لاحقاً</string>
+    <string name="ai_gen_weak">لم أستطع تمييز كلمات كافية في هذه الأغنية</string>
 </resources>

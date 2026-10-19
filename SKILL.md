@@ -84,3 +84,12 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Prefetch.upcoming skips the song after next whenever a size >= 400 px is requested.
 - PlayerPanel.applyProgress: sheet scale is now 0.70 to 1 (was 0.84 to 1), pivot bottom centre, so the shrink is clearly visible while dragging down.
 - Not verified on a device (no compiler in the sandbox).
+
+# Performance + stability: work moved off the UI thread
+- New Bg.java: Bg.io (single thread, ordered, disk writes), Bg.query (2 threads, system queries), Bg.main (post to the UI thread). Every task is wrapped so an exception is logged with CrashGuard.nonFatal instead of killing the thread silently. Threads run at background priority.
+- Store.save: the playlists are copied on the calling thread (cheap) and the JSON is built and written on Bg.io, in order, so the last save always wins. Adding to favourites or a playlist no longer builds the whole JSON on the UI thread.
+- Resume.save: the values are read from the player on the UI thread (the controller needs it) and the SharedPreferences write runs on Bg.io.
+- PlayerPanel.refreshExtrasInner: the Bluetooth check (AudioManager binder call) runs on Bg.query and the tint is applied back on the UI thread, only if the panel is still attached.
+- App.onCreate: settings and playlists are loaded on Bg.io at start, so the first screen does not wait for the SharedPreferences file or the JSON parse.
+- Already off the UI thread before: cover decoding (Art.EX / HERO / FX), library scan, play stats save, media watcher, queue building (Pb.BUILD).
+- Not verified on a device (no compiler in the sandbox).

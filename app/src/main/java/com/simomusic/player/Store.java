@@ -154,20 +154,31 @@ public final class Store {
     }
 
     private static void save(Context c) {
-        JSONArray a = new JSONArray();
-        try {
-            for (Playlist p : cache) {
-                JSONObject o = new JSONObject();
-                o.put("id", p.id);
-                o.put("name", p.name);
-                JSONArray ids = new JSONArray();
-                for (long id : p.ids) ids.put(id);
-                o.put("ids", ids);
-                a.put(o);
-            }
-        } catch (JSONException ignored) {
+        final Context app = c.getApplicationContext();
+        final List<Playlist> snap = new ArrayList<>(cache.size());
+        for (Playlist p : cache) {
+            Playlist q = new Playlist();
+            q.id = p.id;
+            q.name = p.name;
+            q.ids.addAll(p.ids);
+            snap.add(q);
         }
-        prefs(c).edit().putString("playlists", a.toString()).apply();
+        Bg.io("save playlists", () -> {
+            JSONArray a = new JSONArray();
+            try {
+                for (Playlist p : snap) {
+                    JSONObject o = new JSONObject();
+                    o.put("id", p.id);
+                    o.put("name", p.name);
+                    JSONArray ids = new JSONArray();
+                    for (long id : p.ids) ids.put(id);
+                    o.put("ids", ids);
+                    a.put(o);
+                }
+            } catch (JSONException ignored) {
+            }
+            prefs(app).edit().putString("playlists", a.toString()).apply();
+        });
     }
 
     public static synchronized Playlist playlist(Context c, String id) {

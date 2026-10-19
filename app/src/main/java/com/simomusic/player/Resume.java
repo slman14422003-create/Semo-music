@@ -59,13 +59,18 @@ public final class Resume {
             idsDirty = false;
         }
         androidx.media3.common.MediaItem cur = p.getCurrentMediaItem();
-        Store.prefs(c).edit()
-                .putString("rs_ids", idsCache)
-                .putString("rs_cur", cur == null ? "" : cur.mediaId)
-                .putLong("rs_pos", Math.max(0, p.getCurrentPosition()))
-                .putBoolean("rs_shuffle", p.getShuffleModeEnabled())
-                .putInt("rs_repeat", p.getRepeatMode())
-                .apply();
+        final Context app = c.getApplicationContext();
+        final String ids = idsCache, curId = cur == null ? "" : cur.mediaId;
+        final long pos = Math.max(0, p.getCurrentPosition());
+        final boolean shuffle = p.getShuffleModeEnabled();
+        final int repeat = p.getRepeatMode();
+        Bg.io("resume write", () -> Store.prefs(app).edit()
+                .putString("rs_ids", ids)
+                .putString("rs_cur", curId)
+                .putLong("rs_pos", pos)
+                .putBoolean("rs_shuffle", shuffle)
+                .putInt("rs_repeat", repeat)
+                .apply());
     }
 
     /** Once per app start, after the library is loaded. Does nothing if something is already queued. */

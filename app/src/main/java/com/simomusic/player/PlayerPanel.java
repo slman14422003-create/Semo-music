@@ -363,7 +363,13 @@ public final class PlayerPanel extends FrameLayout {
     private void refreshExtrasInner() {
         heart(false);
         Ui.tint(timer, Pb.sleepAt > 0 ? R.color.accent_text : R.color.text_primary);
-        Ui.tint(bt, BtAudio.connected(act) ? R.color.accent_text : R.color.text_primary);
+        final Context app = act.getApplicationContext();
+        Bg.query("bluetooth state", () -> {
+            final boolean on = BtAudio.connected(app);
+            Bg.main(() -> {
+                if (isAttachedToWindow()) Ui.tint(bt, on ? R.color.accent_text : R.color.text_primary);
+            });
+        });
     }
 
     private final android.media.AudioDeviceCallback btWatch = new android.media.AudioDeviceCallback() {

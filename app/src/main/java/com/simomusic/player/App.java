@@ -48,6 +48,11 @@ public class App extends Application {
         CrashGuard.install(this);
         Accent.applyMode(this);
         MemoryGuard.install(this);   // covers are released when Android is short of memory
+        final android.content.Context appCtx = this;
+        Bg.io("warm up settings", () -> {
+            Store.prefs(appCtx).contains("sort");
+            Store.playlists(appCtx);
+        });
         MediaWatcher.start(this);   // songs downloaded or deleted anywhere show up in the app by themselves
         if (Build.VERSION.SDK_INT >= 26) {
             NotificationChannel ch = new NotificationChannel(CH_LOCK, getString(R.string.ch_lock), NotificationManager.IMPORTANCE_HIGH);

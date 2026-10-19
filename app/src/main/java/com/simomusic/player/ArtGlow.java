@@ -21,22 +21,25 @@ public final class ArtGlow extends View {
         super(c);
         setAlpha(0f);
         setClickable(false);
+        setLayerType(LAYER_TYPE_HARDWARE, null);
     }
 
     /** color 0 = no glow (grey / missing cover). */
-    public void setColor(int color) {
+    public void setColor(final int color) {
         if (va != null) va.cancel();
-        animate().alpha(color == 0 ? 0f : 1f).setDuration(Motion.AMBIENT).start();
-        if (color == 0) return;
-        final int from = shown;
-        va = ValueAnimator.ofObject(new ArgbEvaluator(), from, color);
-        va.setDuration(Motion.AMBIENT);
-        va.addUpdateListener(a -> {
-            shown = (Integer) a.getAnimatedValue();
+        animate().cancel();
+        if (color == 0) {
+            animate().alpha(0f).setDuration(Motion.SHORT).start();
+            return;
+        }
+        final Runnable apply = () -> {
+            shown = color;
             p.setColorFilter(new PorterDuffColorFilter(shown, PorterDuff.Mode.SRC_IN));
             invalidate();
-        });
-        va.start();
+            animate().alpha(1f).setDuration(Motion.BASE).start();
+        };
+        if (getAlpha() > 0.02f && shown != color) animate().alpha(0f).setDuration(Motion.FAST).withEndAction(apply).start();
+        else apply.run();
     }
 
     @Override

@@ -176,7 +176,7 @@ public final class PlayerPanel extends FrameLayout {
             long id = Pb.currentId();
             if (id == lastExtrasId) return;
             lastExtrasId = id;
-            refreshExtras();
+            heart(false);
         };
         np.artCb = u -> Backdrop.set(a, bg, u, np.artPx());
     }
@@ -322,6 +322,11 @@ public final class PlayerPanel extends FrameLayout {
         float sc = 0.95f + 0.05f * f;
         col.setScaleX(sc);
         col.setScaleY(sc);
+        float ps = 0.84f + 0.16f * f;
+        setPivotX(getWidth() / 2f);
+        setPivotY(getHeight());
+        setScaleX(ps);
+        setScaleY(ps);
         barsFor(f);
         host.onProgress(f);
     }

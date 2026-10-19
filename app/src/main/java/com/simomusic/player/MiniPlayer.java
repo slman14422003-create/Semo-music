@@ -382,11 +382,11 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         col.animate().cancel();
         col.setAlpha(0f);
         col.setTranslationX(d);
-        col.animate().alpha(1f).translationX(0f).setDuration(Motion.BASE).setInterpolator(Motion.ENTER).start();
+        col.animate().alpha(1f).translationX(0f).setDuration(Motion.BASE).setInterpolator(Motion.ENTER).withLayer().start();
         art.animate().cancel();
         art.setScaleX(0.86f);
         art.setScaleY(0.86f);
-        art.animate().scaleX(1f).scaleY(1f).setDuration(Motion.BASE).setInterpolator(Motion.POP).start();
+        art.animate().scaleX(1f).scaleY(1f).setDuration(Motion.BASE).setInterpolator(Motion.POP).withLayer().start();
     }
 
     private void refresh() {
@@ -443,8 +443,12 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         if (!key.equals(lastArt)) {
             lastArt = key;
             Art.load(getContext(), it.mediaMetadata.artworkUri, art, Ui.dp(getContext(), 54), true);
-            tintFor(it.mediaMetadata.artworkUri, key);
-            Prefetch.upcoming(getContext(), m, Ui.dp(getContext(), 54), Ui.dp(getContext(), 54));
+            final Uri artUri = it.mediaMetadata.artworkUri;
+            h.postDelayed(() -> {
+                if (!started || !key.equals(lastArt)) return;
+                tintFor(artUri, key);
+                Prefetch.upcoming(getContext(), Pb.get(), Ui.dp(getContext(), 54));
+            }, 160);
         }
     }
 }

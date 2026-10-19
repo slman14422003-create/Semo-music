@@ -65,3 +65,16 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - View has no setHasOverlappingRendering method (only the protected-style override hasOverlappingRendering()), so the release compile failed with 5 errors in MainActivity (rv, skeleton), LockActivity, NowPlaying, PlayerPanel. All five calls removed; nothing else changed.
 - If the offscreen-buffer optimisation is wanted again, override hasOverlappingRendering() to return false in a small View subclass instead of calling a setter.
 - Not verified on a device or with a compiler (none in the sandbox): rerun the GitHub Actions build.
+
+# Song change lag + shrink while dragging the player down
+- PlayerPanel.applyProgress: the whole sheet now scales from 0.84 to 1 (pivot bottom centre) with the drag progress, so pulling the player down fast shrinks it like a card; collapse / expand keep the same spring.
+- PlayerPanel: np.onRefresh only refreshes the heart on a song change; the Bluetooth and timer tints are refreshed on attach, on audio device changes and from the menus (AudioManager.getDevices was a binder call on every song change).
+- NowPlaying and MiniPlayer: on a song change the cover swap and its entrance animation run first; Prefetch.upcoming, colour pick and backdrop (NowPlaying) and colour pick and prefetch (MiniPlayer) start 160 ms later and are skipped if the song changed again meanwhile.
+- Entrance animations of the cover and of the mini player text use withLayer() so alpha and scale run on a hardware layer for the length of the animation.
+- Not verified on a device (no compiler in the sandbox): test fast skips by button and by cover swipe, and a fast drag down of the full player.
+
+# Cover change lag in the full player (second pass)
+- Backdrop.set: no more TransitionDrawable on the full-screen backdrop (it redrew the whole screen every frame for 600 ms). The old picture goes into a temporary ghost ImageView on a hardware layer that only fades its alpha (Motion.BASE) and is removed at the end; the new picture is set on the backdrop at once. Falls back to the old fade-in when the parent is not a FrameLayout.
+- ArtGlow: the colour is no longer animated per frame (full-screen radial gradient redraw). It fades out (FAST), takes the new colour, fades in (BASE); the view has a hardware layer.
+- Prefetch.upcoming: for large covers (size >= 400 px) only the next and previous songs are prefetched, not the one after next, to cut decode threads and GC pressure while a song starts.
+- Not verified on a device (no compiler in the sandbox).

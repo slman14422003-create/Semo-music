@@ -333,11 +333,15 @@ public final class NowPlaying implements Player.Listener {
                 art.setScaleX(coverTarget * 0.88f);
                 art.setScaleY(coverTarget * 0.88f);
                 art.animate().alpha(1f).scaleX(coverTarget).scaleY(coverTarget).setDuration(Motion.BASE)
-                        .setInterpolator(Motion.SPRING).start();
+                        .setInterpolator(Motion.SPRING).withLayer().start();
             });
-            Prefetch.upcoming(c, m, artPx);
-            tintFromArt(au, key);
-            if (artCb != null) artCb.onArt(au);
+            final Uri artUri = au;
+            h.postDelayed(() -> {
+                if (!started || !key.equals(lastArt)) return;
+                Prefetch.upcoming(c, Pb.get(), artPx);
+                tintFromArt(artUri, key);
+                if (artCb != null) artCb.onArt(artUri);
+            }, 160);
         }
         progress();
         schedule();

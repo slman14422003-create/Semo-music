@@ -678,7 +678,6 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
             tv.setLineSpacing(0, 1.1f);
             tv.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
             tv.setPadding(Ui.dp(d, 28), Ui.dp(d, 11), Ui.dp(d, 28), Ui.dp(d, 11));
-            tv.setHasOverlappingRendering(false);
             tv.setLayoutParams(new RecyclerView.LayoutParams(-1, -2));
             tv.addOnLayoutChangeListener((v, l, t, r, b, oL, oT, oR, oB) -> {
                 v.setPivotX((r - l) / 2f);

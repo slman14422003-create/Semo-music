@@ -77,23 +77,30 @@ public final class Resume {
     public static void restore(Context c) {
         if (restored || !Store.flag(c, "resume", true)) return;
         restored = true;
-        SharedPreferences sp = Store.prefs(c);
-        String ids = sp.getString("rs_ids", "");
-        if (ids == null || ids.isEmpty()) return;
-        String cur = sp.getString("rs_cur", "");
-        List<Track> list = new ArrayList<>();
-        int idx = 0;
-        for (String s : ids.split(",")) {
-            if (s.isEmpty()) continue;
-            try {
-                Track t = Library.byId.get(Long.parseLong(s));
-                if (t == null) continue;
-                if (s.equals(cur)) idx = list.size();
-                list.add(t);
-            } catch (NumberFormatException ignored) {
+        final Context app = c.getApplicationContext();
+        Bg.query("resume restore", () -> {
+            SharedPreferences sp = Store.prefs(app);
+            String ids = sp.getString("rs_ids", "");
+            if (ids == null || ids.isEmpty()) return;
+            String cur = sp.getString("rs_cur", "");
+            final List<Track> list = new ArrayList<>();
+            int at = 0;
+            for (String s : ids.split(",")) {
+                if (s.isEmpty()) continue;
+                try {
+                    Track t = Library.byId.get(Long.parseLong(s));
+                    if (t == null) continue;
+                    if (s.equals(cur)) at = list.size();
+                    list.add(t);
+                } catch (NumberFormatException ignored) {
+                }
             }
-        }
-        if (list.isEmpty()) return;
-        Pb.restore(c, list, idx, sp.getLong("rs_pos", 0), sp.getBoolean("rs_shuffle", false), sp.getInt("rs_repeat", 0));
+            if (list.isEmpty()) return;
+            final int idx = at;
+            final long pos = sp.getLong("rs_pos", 0);
+            final boolean shuffle = sp.getBoolean("rs_shuffle", false);
+            final int repeat = sp.getInt("rs_repeat", 0);
+            Bg.main(() -> Pb.restore(app, list, idx, pos, shuffle, repeat));
+        });
     }
 }

@@ -93,3 +93,12 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - App.onCreate: settings and playlists are loaded on Bg.io at start, so the first screen does not wait for the SharedPreferences file or the JSON parse.
 - Already off the UI thread before: cover decoding (Art.EX / HERO / FX), library scan, play stats save, media watcher, queue building (Pb.BUILD).
 - Not verified on a device (no compiler in the sandbox).
+
+# Swipe down anywhere + more background threads
+- PlayerPanel.dispatchTouchEvent: the downward gesture is now caught before the children (cover, buttons, seek area excluded only when the finger starts on the seek bar) and no longer depends on onInterceptTouchEvent, so requestDisallowInterceptTouchEvent from a child cannot block it. The children get a cancel (swallow flag keeps onTouchEvent from reacting to it) and the sheet follows the finger and shrinks (scale 0.70 to 1).
+- A fast flick closes the player even without a long drag: on ACTION_UP, vertical velocity above 600 dp/s, at least 20 dp of travel and mostly vertical triggers collapse(true) with the finger speed as spring start velocity. The normal release threshold is now 180 dp/s (was 260).
+- VelocityTracker input is de-duplicated by event time (intercept, dispatch and onTouchEvent all feed it).
+- MainActivity.refresh is split: with a search query the sort and filter run on Bg.query and applyList(...) runs on the UI thread only if no newer refresh started (refreshGen); without a query it stays synchronous (cached sort).
+- Resume.restore: the id list is built on Bg.query and Pb.restore (which needs a looper) is called back on the UI thread.
+- Art.FX has 2 threads (colour pick and backdrop blur no longer wait for each other).
+- Not verified on a device (no compiler in the sandbox).

@@ -402,14 +402,66 @@ public final class PlayerPanel extends FrameLayout {
 
     // ---- drag the whole sheet down (collapse) ---------------------------------
 
+    private long vtLast;
+    private boolean swallow;
+
     private void vtReset(MotionEvent e) {
         if (vt != null) vt.recycle();
         vt = VelocityTracker.obtain();
         vt.addMovement(e);
+        vtLast = e.getEventTime();
     }
 
     private void vtAdd(MotionEvent e) {
-        if (vt != null) vt.addMovement(e);
+        if (vt == null || e.getEventTime() == vtLast) return;
+        vtLast = e.getEventTime();
+        vt.addMovement(e);
+    }
+
+    private void cancelChildren(MotionEvent e) {
+        MotionEvent c = MotionEvent.obtain(e);
+        c.setAction(MotionEvent.ACTION_CANCEL);
+        swallow = true;
+        try {
+            super.dispatchTouchEvent(c);
+        } finally {
+            swallow = false;
+            c.recycle();
+        }
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent e) {
+        int a = e.getActionMasked();
+        if (a == MotionEvent.ACTION_DOWN) {
+            downX = e.getRawX();
+            downY = e.getRawY();
+            onSeek = hit(np.seekBlock, e);
+            vtReset(e);
+        } else if (a == MotionEvent.ACTION_MOVE) {
+            vtAdd(e);
+            if (!tracking && canGrab() && !onSeek && Gest.downLoose(e.getRawX() - downX, e.getRawY() - downY, slop)) {
+                cancelChildren(e);
+                startTracking(e);
+                setTranslationY(Math.max(0f, Math.min(collapsedY, e.getRawY() - startRaw)));
+                applyProgress();
+                return true;
+            }
+        } else if (a == MotionEvent.ACTION_UP && !tracking && canGrab() && !onSeek && vt != null) {
+            vtAdd(e);
+            vt.computeCurrentVelocity(1000);
+            float vy = vt.getYVelocity();
+            float dy = e.getRawY() - downY, dx = e.getRawX() - downX;
+            if (vy > Gest.fling(act, 600) && dy > Ui.dp(act, 20) && dy > Math.abs(dx) * 1.2f) {
+                cancelChildren(e);
+                releaseVy = vy;
+                vt.recycle();
+                vt = null;
+                collapse(true);
+                return true;
+            }
+        }
+        return super.dispatchTouchEvent(e);
     }
 
     @Override
@@ -456,6 +508,7 @@ public final class PlayerPanel extends FrameLayout {
     @SuppressLint("ClickableViewAccessibility")
     @Override
     public boolean onTouchEvent(MotionEvent e) {
+        if (swallow) return true;
         switch (e.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
                 downX = e.getRawX();
@@ -486,7 +539,7 @@ public final class PlayerPanel extends FrameLayout {
                     releaseVy = vy;
                     Ui.gestureEnd(this);
                     boolean closing = e.getActionMasked() == MotionEvent.ACTION_UP
-                            && (vy > Gest.fling(act, 260) || (vy > -Gest.fling(act, 260) && getTranslationY() > Math.min(collapsedY * 0.28f, Ui.dp(act, 90))));
+                            && (vy > Gest.fling(act, 180) || (vy > -Gest.fling(act, 260) && getTranslationY() > Math.min(collapsedY * 0.28f, Ui.dp(act, 90))));
                     if (closing) collapse(true);
                     else expand(true);
                 }

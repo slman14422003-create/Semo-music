@@ -431,14 +431,28 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         refresh();
     }
 
+    private int refreshGen;
+
     private void refresh() {
-        List<Track> all = Library.sorted(Store.sort(this));
-        int total = Library.tracks.size();
-        if (!query.isEmpty()) {
-            List<Track> f = new ArrayList<>();
-            for (Track t : all) if (Norm.matches(t.key, queryTokens)) f.add(t);
-            all = f;
+        final int gen = ++refreshGen;
+        if (query.isEmpty()) {
+            applyList(Library.sorted(Store.sort(this)));
+            return;
         }
+        final int mode = Store.sort(this);
+        final String[] tokens = queryTokens;
+        Bg.query("search", () -> {
+            List<Track> src = Library.sorted(mode);
+            final List<Track> f = new ArrayList<>();
+            for (Track t : src) if (Norm.matches(t.key, tokens)) f.add(t);
+            Bg.main(() -> {
+                if (gen == refreshGen && !isFinishing() && !isDestroyed()) applyList(f);
+            });
+        });
+    }
+
+    private void applyList(List<Track> all) {
+        int total = Library.tracks.size();
         shown = all;
         songs.header = all.isEmpty() ? null : actions;
         songs.setData(all);

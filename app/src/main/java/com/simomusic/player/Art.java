@@ -69,7 +69,7 @@ public final class Art {
         }
     });
 
-    public static final ExecutorService FX = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+    public static final ExecutorService FX = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
             new java.util.concurrent.LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
         @Override
         public Thread newThread(final Runnable r) {

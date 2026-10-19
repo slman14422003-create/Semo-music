@@ -25,8 +25,8 @@ public final class Prefetch {
             lastKey = key;
             int n = m.getMediaItemCount();
             int idx = m.getCurrentMediaItemIndex();
-            for (int step = 1; step <= 2; step++) {
-                int i = step == 1 ? m.getNextMediaItemIndex() : idx + 2;
+            for (int step = 1; step <= 3; step++) {
+                int i = step == 1 ? m.getNextMediaItemIndex() : step == 2 ? idx + 2 : m.getPreviousMediaItemIndex();
                 if (i < 0 || i >= n || i == idx) continue;
                 for (int px : sizes) {
                     if (px > 0) Art.fetch(c, m.getMediaItemAt(i).mediaMetadata.artworkUri, px, b -> {

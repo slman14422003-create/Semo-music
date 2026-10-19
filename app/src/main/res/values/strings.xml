@@ -268,6 +268,10 @@
     <string name="bt_lvl_high">High</string>
     <string name="bt_vbass">Virtual bass</string>
     <string name="bt_vbass_sub">Adds harmonics of the lowest notes, so tiny earbud drivers sound like they play deeper bass.</string>
+    <string name="bt_contour">Volume-aware sound</string>
+    <string name="bt_contour_sub">At low volume the ear hears less bass and treble. This adds them back automatically and fades out as you turn the volume up.</string>
+    <string name="bt_smooth">Soften harsh highs</string>
+    <string name="bt_smooth_sub">Tames sharp \"s\" sounds and tinny treble that cheap earbuds exaggerate, only at the moments they get harsh.</string>
     <string name="bt_all">Use on all outputs</string>
     <string name="bt_all_sub">Also tune the sound on the phone speaker and wired headphones.</string>
     <string name="lock_charging">Charging %1$d%%</string>

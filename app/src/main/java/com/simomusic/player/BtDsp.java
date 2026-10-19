@@ -24,7 +24,8 @@ public final class BtDsp {
         public boolean enabled;
         public final float[] eq = new float[BANDS];     // dB per band
         public float targetLufs = Float.NaN;            // NaN = loudness normalization off
-        public boolean comp, wide, vbass;
+        public boolean comp, wide, vbass, smooth;
+        public float contour;
         public float ceilingDb = -1.5f;                 // limiter ceiling (dBFS); below 0 leaves headroom for codec overshoot
     }
 
@@ -73,6 +74,25 @@ public final class BtDsp {
         void lowpass(double fs, double f, double q) {
             double w = 2 * Math.PI * f / fs, al = Math.sin(w) / (2 * q), cs = Math.cos(w);
             set((1 - cs) / 2, 1 - cs, (1 - cs) / 2, 1 + al, -2 * cs, 1 - al);
+        }
+
+        void bandpass(double fs, double f, double q) {
+            double w = 2 * Math.PI * f / fs, al = Math.sin(w) / (2 * q), cs = Math.cos(w);
+            set(al, 0, -al, 1 + al, -2 * cs, 1 - al);
+        }
+
+        void lowShelf(double fs, double f, double gainDb) {
+            double A = Math.pow(10, gainDb / 40), w = 2 * Math.PI * f / fs, cs = Math.cos(w), sn = Math.sin(w);
+            double beta = 2 * Math.sqrt(A) * (sn / 2 * Math.sqrt(2));
+            set(A * ((A + 1) - (A - 1) * cs + beta), 2 * A * ((A - 1) - (A + 1) * cs), A * ((A + 1) - (A - 1) * cs - beta),
+                    (A + 1) + (A - 1) * cs + beta, -2 * ((A - 1) + (A + 1) * cs), (A + 1) + (A - 1) * cs - beta);
+        }
+
+        void highShelf(double fs, double f, double gainDb) {
+            double A = Math.pow(10, gainDb / 40), w = 2 * Math.PI * f / fs, cs = Math.cos(w), sn = Math.sin(w);
+            double beta = 2 * Math.sqrt(A) * (sn / 2 * Math.sqrt(2));
+            set(A * ((A + 1) + (A - 1) * cs + beta), -2 * A * ((A - 1) + (A + 1) * cs), A * ((A + 1) + (A - 1) * cs - beta),
+                    (A + 1) - (A - 1) * cs + beta, 2 * ((A - 1) - (A + 1) * cs), (A + 1) - (A - 1) * cs - beta);
         }
 
         void highpass(double fs, double f, double q) {
@@ -179,6 +199,13 @@ public final class BtDsp {
     // widener
     private final Bq sideHp = new Bq();
 
+    private final Bq csLo = new Bq(), csHi = new Bq();
+    private boolean csOn;
+
+    private final Bq dsBp = new Bq();
+    private boolean dsOk;
+    private double dsEnvB, dsEnvF, dsK, dsAtt, dsRelB, dsRelF, dsAttK, dsRelK;
+
     // limiter
     private int lookN = 66;
     private float[] audioRing = new float[2 * 65];
@@ -233,6 +260,13 @@ public final class BtDsp {
         vbHp1.highpass(fs, 160, Math.sqrt(0.5));
         vbHp2.highpass(fs, 160, Math.sqrt(0.5));
         sideHp.highpass(fs, 150, Math.sqrt(0.5));
+        dsOk = fs >= 22050;
+        dsBp.bandpass(fs, 6500, 1.0);
+        dsAtt = 1 - Math.exp(-1.0 / (0.0005 * fs));
+        dsRelB = 1 - Math.exp(-1.0 / (0.040 * fs));
+        dsRelF = 1 - Math.exp(-1.0 / (0.150 * fs));
+        dsAttK = 1 - Math.exp(-1.0 / (0.001 * fs));
+        dsRelK = 1 - Math.exp(-1.0 / (0.050 * fs));
 
         lookN = Math.max(8, (int) Math.round(0.0015 * fs));
         audioRing = new float[(lookN - 1) * 2];
@@ -251,6 +285,10 @@ public final class BtDsp {
         vbHp1.clear();
         vbHp2.clear();
         sideHp.clear();
+        csLo.clear();
+        csHi.clear();
+        dsBp.clear();
+        dsEnvB = dsEnvF = dsK = 0;
         lowLp1.clear();
         hiHp1.clear();
         midLp2.clear();
@@ -344,7 +382,21 @@ public final class BtDsp {
             for (int j = 0; j < BANDS; j++) if (eqOn[j]) tot += magDb(eq[j], FREQ[i], fs);
             maxUp = Math.max(maxUp, tot);
         }
-        headroomDb = 0.5 * maxUp;
+        double cg = Math.max(0, Math.min(1, p.contour));
+        boolean wasCs = csOn;
+        csOn = cg > 0.02 && fs >= 22050;
+        if (csOn) {
+            csLo.lowShelf(fs, 110, 4.0 * cg);
+            csHi.highShelf(fs, 6500, 1.5 * cg);
+        } else {
+            csLo.ident();
+            csHi.ident();
+            if (wasCs) {
+                csLo.clear();
+                csHi.clear();
+            }
+        }
+        headroomDb = 0.5 * maxUp + (csOn ? 2.0 * cg : 0);
     }
 
     // ------------------------------------------------------------------ processing
@@ -380,6 +432,11 @@ public final class BtDsp {
                 if (st) r = eq[i].run(r, 1);
             }
 
+            if (csOn) {
+                l = csHi.run(csLo.run(l, 0), 0);
+                if (st) r = csHi.run(csLo.run(r, 1), 1);
+            }
+
             // ---- virtual bass
             if (p.vbass) {
                 double bl = vbLp.run(l, 0), hl = Math.tanh(4 * bl) * 0.25;
@@ -400,6 +457,18 @@ public final class BtDsp {
                 double[] o = compress(l, r, st);
                 l = o[0];
                 r = o[1];
+            }
+
+            if (p.smooth && dsOk) {
+                double bl = dsBp.run(l, 0), br = st ? dsBp.run(r, 1) : 0;
+                double lb = Math.max(Math.abs(bl), Math.abs(br)), lf = Math.max(Math.abs(l), Math.abs(r));
+                dsEnvB += (lb > dsEnvB ? dsAtt : dsRelB) * (lb - dsEnvB);
+                dsEnvF += (lf > dsEnvF ? dsAtt : dsRelF) * (lf - dsEnvF);
+                double tk = dsEnvF > 0.003 ? Math.min(0.55, Math.max(0, (dsEnvB / dsEnvF - 0.30) * 2.5)) : 0;
+                dsK += (tk - dsK) * (tk > dsK ? dsAttK : dsRelK);
+                l -= dsK * bl;
+                if (st) r -= dsK * br;
+                else r = l;
             }
 
             // ---- widener

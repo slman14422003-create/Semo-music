@@ -280,6 +280,10 @@
     <string name="bt_lvl_high">عالٍ</string>
     <string name="bt_vbass">جهير افتراضي</string>
     <string name="bt_vbass_sub">يضيف توافقيات للنغمات المنخفضة جداً، فتبدو السماعات الصغيرة كأنها تعزف جهيراً أعمق.</string>
+    <string name="bt_contour">صوت يتكيف مع مستوى الصوت</string>
+    <string name="bt_contour_sub">عند الصوت المنخفض تسمع الأذن جهيراً وحدة أقل. يعوّضهما تلقائياً ثم يختفي التعويض كلما رفعت الصوت.</string>
+    <string name="bt_smooth">تلطيف الحدة العالية</string>
+    <string name="bt_smooth_sub">يخفف حدة حرف السين والترددات الرفيعة التي تبالغ فيها السماعات الرخيصة، وفقط في اللحظات التي تصبح فيها قاسية.</string>
     <string name="bt_all">استخدام مع كل المخارج</string>
     <string name="bt_all_sub">يضبط الصوت كذلك على سماعة الهاتف والسماعات السلكية.</string>
     <string name="lock_charging">قيد الشحن %1$d%%</string>

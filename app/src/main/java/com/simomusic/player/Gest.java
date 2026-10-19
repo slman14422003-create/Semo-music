@@ -1,7 +1,9 @@
 package com.simomusic.player;
 
 import android.content.Context;
+import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 
 public final class Gest {
     private Gest() {
@@ -16,6 +18,14 @@ public final class Gest {
     }
 
     public static volatile boolean busy;
+
+    public static void kick(View v) {
+        if (v instanceof WaveSeekBar || v instanceof EqView || v instanceof RingPlay) v.invalidate();
+        if (v instanceof ViewGroup) {
+            ViewGroup g = (ViewGroup) v;
+            for (int i = 0; i < g.getChildCount(); i++) kick(g.getChildAt(i));
+        }
+    }
 
     public static boolean downLoose(float dx, float dy, int slop) {
         return dy > slop && dy > Math.abs(dx) * 0.7f;

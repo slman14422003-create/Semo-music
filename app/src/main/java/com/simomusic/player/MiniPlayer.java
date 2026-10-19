@@ -186,9 +186,11 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
                                 horizontal = true;
                                 getParent().requestDisallowInterceptTouchEvent(true);
                                 Ui.gestureStart(MiniPlayer.this);
+                                lift(true);
                             } else if (Gest.down(dx, dy, slop)) {
                                 down = true;
                                 getParent().requestDisallowInterceptTouchEvent(true);
+                                lift(true);
                             }
                         }
                         if (vertical) {
@@ -247,7 +249,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
                                 Ui.confirm(MiniPlayer.this);
                             }
                             animate().translationX(0f).alpha(1f).setDuration(Motion.BASE)
-                                    .setInterpolator(Motion.POP).start();
+                                    .setInterpolator(Motion.POP).withEndAction(() -> lift(false)).start();
                         } else if (down) {
                             boolean go = up && (dy > Ui.dp(c, 56) || vy > Gest.fling(c, 900));
                             if (go) {
@@ -256,7 +258,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
                                 Ui.confirm(MiniPlayer.this);
                             }
                             animate().translationY(0f).setDuration(Motion.BASE)
-                                    .setInterpolator(Motion.POP).start();
+                                    .setInterpolator(Motion.POP).withEndAction(() -> lift(false)).start();
                         } else if (up && !moved && panel != null) {
                             panel.setCollapsedY(getTop());
                             panel.expand(true);
@@ -294,6 +296,27 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
     @Override
     public void onEvents(Player p, Player.Events e) {
         refresh();
+    }
+
+    private boolean lifted;
+
+    private void lift(boolean on) {
+        if (on == lifted) return;
+        lifted = on;
+        setLayerType(on ? LAYER_TYPE_HARDWARE : LAYER_TYPE_NONE, null);
+        if (Gest.busy != on) {
+            Gest.busy = on;
+            if (!on) Gest.kick(this);
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (lifted) {
+            lifted = false;
+            Gest.busy = false;
+        }
+        super.onDetachedFromWindow();
     }
 
     private void applyTint(int accent) {
@@ -334,15 +357,23 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         }
         Art.fetchUrgent(getContext(), uri, Ui.dp(getContext(), 54), b -> {
             if (!key.equals(lastArt)) return;
-            int col = 0;
-            if (b != null) {
+            if (b == null) {
+                TINTS.put(key, 0);
+                applyTint(0);
+                return;
+            }
+            Art.FX.execute(() -> {
+                int col = 0;
                 try {
                     col = dominant(b);
                 } catch (RuntimeException ignored) {
                 }
-            }
-            TINTS.put(key, col);
-            applyTint(col);
+                final int fc = col;
+                post(() -> {
+                    TINTS.put(key, fc);
+                    if (key.equals(lastArt)) applyTint(fc);
+                });
+            });
         });
     }
 

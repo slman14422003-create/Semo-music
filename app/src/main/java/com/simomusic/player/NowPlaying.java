@@ -80,6 +80,7 @@ public final class NowPlaying implements Player.Listener {
         c = ctx;
         artPx = Ui.dp(c, artSizeDp);
         art = Ui.artView(c, artSizeDp, lock ? 36 : 32);
+        art.setHasOverlappingRendering(false);
 
         info = new LinearLayout(c);
         info.setOrientation(LinearLayout.VERTICAL);
@@ -325,16 +326,18 @@ public final class NowPlaying implements Player.Listener {
         if (!key.equals(lastArt)) {
             boolean first = "\u0000".equals(lastArt);
             lastArt = key;
-            Art.load(c, au, art, artPx, true);
+            final boolean animateArt = !first && !quietArt;
+            Art.load(c, au, art, artPx, true, () -> {
+                if (!animateArt || !key.equals(lastArt)) return;
+                art.animate().cancel();
+                art.setAlpha(0.35f);
+                art.setScaleX(coverTarget * 0.88f);
+                art.setScaleY(coverTarget * 0.88f);
+                art.animate().alpha(1f).scaleX(coverTarget).scaleY(coverTarget).setDuration(Motion.BASE)
+                        .setInterpolator(Motion.SPRING).start();
+            });
             Prefetch.upcoming(c, m, artPx);
             tintFromArt(au, key);
-            if (!first && !quietArt) {
-                art.setAlpha(0.35f);
-                art.setScaleX(coverTarget * 0.85f);
-                art.setScaleY(coverTarget * 0.85f);
-                art.animate().alpha(1f).scaleX(coverTarget).scaleY(coverTarget).setDuration(Motion.LONG)
-                        .setInterpolator(Motion.SPRING).start();
-            }
             if (artCb != null) artCb.onArt(au);
         }
         progress();
@@ -365,7 +368,7 @@ public final class NowPlaying implements Player.Listener {
             // colorOf() scales the bitmap and scans every pixel; cheap on its own, but doing it here, on the
             // UI thread, right as the cover's entrance animation plays, was dropping frames. Same background
             // pool the cover art itself decodes on, then hand the result back to the main thread.
-            Art.HERO.execute(() -> {
+            Art.FX.execute(() -> {
                 final int col = colorOf(bmp);
                 h.post(() -> {
                     if (key.equals(lastArt)) applyTint(col);

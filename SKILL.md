@@ -21,7 +21,7 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Home: tapping the title scrolls to top; Shuffle uses smartShuffle when AI Mix is on.
 
 # Drag smoothness fix (full player)
-- Gest.busy is true while PlayerPanel moves (drag or spring). WavePainter, EqView and RingPlay stop their per-frame invalidation while it is true, so the panel layer and home layer are not re-rendered every frame. PlayerPanel.layer(false) clears it and pokes all views to restart animations.
+- Gest.busy is true while PlayerPanel moves (drag or spring). WavePainter, EqView and RingPlay stop their per-frame invalidation while it is true, so the panel layer and home layer are not re-rendered every frame. PlayerPanel.layer(false) clears it and calls Gest.kick, which wakes only WaveSeekBar, EqView and RingPlay (no full-tree invalidate).
 - PlayerPanel: nested col layer removed, corner radius only animates in the first part of the drag, drag-down detection uses Gest.downLoose (diagonal drags count).
 
 # Ideas not done yet
@@ -45,3 +45,18 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - PlayerService: Resume.saveSoon coalesces the 3 saves a skip fires (id list cached until Resume.queueChanged), PlayStats.save is batched 4 s and serialised on a background thread (PlayStats.flush on stop), extendQueue runs 1.5 s after the transition.
 - WavePainter: idle wave redraws at ~30 fps (postInvalidateDelayed(32)); dragging / easing keep full speed. NowPlaying.seek.setProgress(p, false) (the painter eases by itself).
 - Design: palette tuned (light theme now grey canvas + white cards), radius_card 24dp / inner 8dp / thumb 16dp, Ui.shape adds a hairline row_stroke (playing row gets an accent outline), row spacing 16dp x 2dp, medium weight titles (Ui.medium), 54dp row covers, taller pills (50dp) and segmented control (44dp), bold 32sp home title, Ui.flatPlain for per-row buttons (no press animator per row).
+
+# Lock screen swipe, full player drag, cover change lag
+- LockActivity: while a finger is down, clock, cover, glass panel, hint and top row each get their own hardware layer (dragBegin / dragEnd), alpha is set per layer (fade) instead of on the whole content, Gest.busy is true (wave bar stops redrawing) and the arrow pulse is cancelled. Layers are released when the reset animation ends (dragGen guards a re-grab) or in onStop / onDestroy.
+- Unlock thresholds lowered (70 dp, or fling 250 with 24 dp). ACTION_CANCEL (system gesture area steals a fast flick) now also unlocks when the movement qualifies; closing by pull down still needs ACTION_UP.
+- PlayerPanel: the full-screen hardware layer on the sheet is gone (parallax children invalidated it every frame, and creating and dropping it hitched at both ends). The poke of the whole window at the end of a gesture is replaced by Gest.kick. col has setHasOverlappingRendering(false).
+- Cover change: Art.fetch calls Bitmap.prepareToDraw on the worker thread (texture upload off the UI thread). Art.FX is a single thread pool for colour pick and blurred backdrop so they never queue behind cover decoding. Art.load has an overload with a shown callback; NowPlaying starts the cover entrance animation from it, after the new picture is on the view. Prefetch also loads the previous song. PlayerPanel.commitSwipe puts the incoming cover on the view before it slides in.
+- Not verified on a device (no compiler in the sandbox): test the lock screen swipe up fast and slow, drag down the full player from the notification, skip songs by button and by cover swipe.
+
+# Other animation fixes + Bluetooth sound for cheap earbuds
+- MainActivity: song list and loading skeleton use setHasOverlappingRendering(false), so the tab-swap fade and the skeleton pulse no longer copy the whole list into an offscreen buffer every frame.
+- MiniPlayer: horizontal swipe and swipe-down lift the card into a hardware layer and set Gest.busy while it is dragged (lift(on)); released when the spring-back ends or the view detaches. The cover colour pick runs on Art.FX, not on the UI thread.
+- BtDsp new stages (all optional, params in BtDsp.Params): contour (low shelf 110 Hz up to +4 dB and high shelf 6.5 kHz up to +1.5 dB, scaled 0..1) and smooth (dynamic harshness softener). Chain order: normalize, EQ, contour, virtual bass, compressor, softener, widener, limiter.
+- Softener: band-pass at 6.5 kHz (Q 1) subtracted with factor k (max 0.55) when the band peak exceeds 30 percent of the full-signal peak; x - k*bp(x) can never boost any frequency (checked numerically), music that is not harsh stays at k near 0. Mono path writes r = l afterwards.
+- Contour level comes from STREAM_MUSIC volume: 0 at 55 percent volume and above, 1 at 10 percent and below, rounded to 0.05. BtAudio.volPoll checks the volume once a second and re-applies params when it changes. Settings keys bt_contour and bt_smooth, both default on, toggles in BtSheet, strings in values and values-ar.
+- Not verified on a device (no compiler in the sandbox).

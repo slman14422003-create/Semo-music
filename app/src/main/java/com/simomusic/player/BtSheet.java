@@ -308,6 +308,14 @@ public final class BtSheet {
                 Store.setFlag(c, BtAudio.K_VBASS, on);
                 BtAudio.refresh();
             }));
+            g.addView(Ui.toggleRow(c, c.getString(R.string.bt_contour), c.getString(R.string.bt_contour_sub), BtAudio.contour(c), (b2, on) -> {
+                Store.setFlag(c, BtAudio.K_CONTOUR, on);
+                BtAudio.refresh();
+            }));
+            g.addView(Ui.toggleRow(c, c.getString(R.string.bt_smooth), c.getString(R.string.bt_smooth_sub), BtAudio.smooth(c), (b2, on) -> {
+                Store.setFlag(c, BtAudio.K_SMOOTH, on);
+                BtAudio.refresh();
+            }));
             g.addView(Ui.toggleRow(c, c.getString(R.string.bt_all), c.getString(R.string.bt_all_sub), BtAudio.all(c), (b2, on) -> {
                 Store.setFlag(c, BtAudio.K_ALL, on);
                 BtAudio.refresh();

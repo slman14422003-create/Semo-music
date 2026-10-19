@@ -112,6 +112,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         top.addView(chip);
         top.addView(Ui.space(this, 1f), new LinearLayout.LayoutParams(1, 1, 1f));
         top.addView(Ui.icon(this, R.drawable.ic_close, R.string.close, v -> finish()));
+        topRow = top;
         content.addView(top, Ui.lp(-1, -2));
 
         // clock + date (localized pattern, follows 12/24h)
@@ -173,6 +174,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         ImageView up = new ImageView(this);
         up.setImageResource(R.drawable.ic_arrow_down);
         up.setRotation(180f);
+        arrow = up;
         Ui.tint(up, R.color.text_secondary);
         hint.addView(up, Ui.lp(Ui.dp(this, 22), Ui.dp(this, 22)));
         TextView ht = Ui.text(this, getString(R.string.lock_hint), 13, R.color.text_secondary);
@@ -207,6 +209,9 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
     }
 
     private TextView status;
+    private View topRow, arrow;
+    private boolean dragLive;
+    private int dragGen;
     private LinearLayout clockBox, glass;
     private CoverBox coverBox;
     private View hintBox;
@@ -253,9 +258,47 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         }
     }
 
+    private View[] movers() {
+        return new View[]{topRow, clockBox, coverBox, glass, hintBox};
+    }
+
+    private void dragBegin() {
+        if (dragLive) return;
+        dragLive = true;
+        dragGen++;
+        Gest.busy = true;
+        if (pulse != null) pulse.cancel();
+        if (arrow != null) arrow.setTranslationY(0f);
+        content.animate().cancel();
+        for (View v : movers()) {
+            if (v == null) continue;
+            v.animate().cancel();
+            v.setHasOverlappingRendering(false);
+            v.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        }
+    }
+
+    private void dragEnd() {
+        if (!dragLive) return;
+        dragLive = false;
+        for (View v : movers()) {
+            if (v != null) v.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+        Gest.busy = false;
+        Gest.kick(content);
+        if (pulse != null && animationsOn() && !isFinishing()) pulse.start();
+    }
+
+    private void fade(float a) {
+        for (View v : movers()) {
+            if (v != null) v.setAlpha(a);
+        }
+    }
+
     /** Drag upward; past the threshold the keyguard is dismissed (PIN / pattern / fingerprint if one is set). */
     private void setupSwipe(View root) {
         final float[] y0 = {0};
+        final int slop = android.view.ViewConfiguration.get(this).getScaledTouchSlop();
         final android.view.VelocityTracker[] vt = new android.view.VelocityTracker[1];
         root.setOnTouchListener((v, e) -> {
             switch (e.getActionMasked()) {
@@ -269,17 +312,20 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                     if (vt[0] == null) return true;
                     vt[0].addMovement(e);
                     float raw = e.getRawY() - y0[0];
+                    if (!dragLive) {
+                        if (Math.abs(raw) < slop) return true;
+                        dragBegin();
+                    }
                     if (raw > 0) {
                         // pulling down (reachable with the thumb) closes this screen: it follows the finger a little
                         parallax(0f);
                         content.setTranslationY(raw * 0.45f);
-                        content.setAlpha(Math.max(0.4f, 1f - raw / Ui.dp(this, 700)));
+                        fade(Math.max(0.4f, 1f - raw / Ui.dp(this, 700)));
                         return true;
                     }
-                    float dy = raw;
                     content.setTranslationY(0f);
-                    parallax(dy);
-                    content.setAlpha(Math.max(0.3f, 1f + dy / Ui.dp(this, 560)));
+                    parallax(raw);
+                    fade(Math.max(0.3f, 1f + raw / Ui.dp(this, 560)));
                     return true;
                 }
                 case MotionEvent.ACTION_UP:
@@ -294,7 +340,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                     }
                     boolean up = e.getActionMasked() == MotionEvent.ACTION_UP;
                     float dist = e.getRawY() - y0[0];
-                    if (up && (dist < -Ui.dp(this, 90) || (vy < -Gest.fling(this, 300) && dist < -Ui.dp(this, 30)))) unlock();
+                    if (dist < -Ui.dp(this, 70) || (vy < -Gest.fling(this, 250) && dist < -Ui.dp(this, 24))) unlock();
                     else if (up && (dist > Ui.dp(this, 80) || (vy > Gest.fling(this, 300) && dist > Ui.dp(this, 30)))) {
                         Ui.confirm(content);
                         finish();
@@ -321,14 +367,22 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
 
     private void reset() {
         android.view.animation.Interpolator spring = Motion.SPRING;
-        content.animate().translationY(0).alpha(1f).setDuration(Motion.SHORT).setInterpolator(spring).start();
-        View[] layers = {clockBox, coverBox, glass, hintBox};
+        final int gen = ++dragGen;
+        content.animate().translationY(0).setDuration(Motion.SHORT).setInterpolator(spring).start();
+        View[] layers = movers();
         long d = 0;
-        for (View v : layers) {
+        for (int i = 0; i < layers.length; i++) {
+            View v = layers[i];
             if (v == null) continue;
-            v.animate().translationY(0).setStartDelay(d).setDuration(Motion.BASE).setInterpolator(spring).start();
+            android.view.ViewPropertyAnimator pa = v.animate().translationY(0).alpha(1f).setStartDelay(d)
+                    .setDuration(Motion.BASE).setInterpolator(spring);
+            if (i == layers.length - 1) pa.withEndAction(() -> {
+                if (gen == dragGen) dragEnd();
+            });
+            pa.start();
             d += 25;       // each layer settles a moment after the previous one
         }
+        if (!dragLive) dragEnd();
     }
 
     private void unlock() {
@@ -380,6 +434,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
 
     @Override
     protected void onStop() {
+        if (dragLive) {
+            dragLive = false;
+            Gest.busy = false;
+        }
         LockLauncher.lastSeen = android.os.SystemClock.elapsedRealtime();
         if (np != null) np.stop();
         clockH.removeCallbacksAndMessages(null);
@@ -388,6 +446,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
 
     @Override
     protected void onDestroy() {
+        if (dragLive) {
+            dragLive = false;
+            Gest.busy = false;
+        }
         if (pulse != null) pulse.cancel();
         try {
             unregisterReceiver(closer);

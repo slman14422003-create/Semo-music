@@ -69,6 +69,19 @@ public final class Art {
         }
     });
 
+    public static final ExecutorService FX = new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+        @Override
+        public Thread newThread(final Runnable r) {
+            Thread t = new Thread(() -> {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
+                r.run();
+            }, "cover-fx");
+            t.setDaemon(true);
+            return t;
+        }
+    });
+
     private static final LruCache<String, Bitmap> MASTER = new LruCache<String, Bitmap>((int) Math.min(12L * 1024 * 1024, Runtime.getRuntime().maxMemory() / 16)) {
         @Override
         protected int sizeOf(String k, Bitmap b) {
@@ -207,7 +220,13 @@ public final class Art {
                 }
             }
             final Bitmap r = rr;
-            if (r != null) CACHE.put(key, r);
+            if (r != null) {
+                try {
+                    r.prepareToDraw();
+                } catch (RuntimeException ignored) {
+                }
+                CACHE.put(key, r);
+            }
             else MISSING.add(key);
             MAIN.post(() -> {
                 if (job == null) {
@@ -233,8 +252,15 @@ public final class Art {
     }
 
     public static void load(Context c, final Uri uri, final ImageView iv, final int px, final boolean keepOld) {
+        load(c, uri, iv, px, keepOld, null);
+    }
+
+    public static void load(Context c, final Uri uri, final ImageView iv, final int px, final boolean keepOld, final Runnable shown) {
         final String key = String.valueOf(uri);
-        if (key.equals(iv.getTag(R.id.tag_art)) && iv.getTag(R.id.tag_art_ok) != null) return;
+        if (key.equals(iv.getTag(R.id.tag_art)) && iv.getTag(R.id.tag_art_ok) != null) {
+            if (shown != null) shown.run();
+            return;
+        }
         iv.setTag(R.id.tag_art, key);
         iv.setTag(R.id.tag_art_ok, null);
         if (uri != null) {
@@ -242,18 +268,23 @@ public final class Art {
             if (cached != null) {
                 show(iv, cached, px);
                 iv.setTag(R.id.tag_art_ok, Boolean.TRUE);
+                if (shown != null) shown.run();
                 return;
             }
         }
         boolean hasPicture = keepOld && iv.getDrawable() instanceof android.graphics.drawable.BitmapDrawable;
         if (!hasPicture || uri == null) show(iv, null, px);
-        if (uri == null) return;
+        if (uri == null) {
+            if (shown != null) shown.run();
+            return;
+        }
         Cb done = b -> {
             if (b == null && hasPicture && key.equals(iv.getTag(R.id.tag_art))) show(iv, null, px);
             if (b != null && key.equals(iv.getTag(R.id.tag_art))) {
                 show(iv, b, px);
                 iv.setTag(R.id.tag_art_ok, Boolean.TRUE);
             }
+            if (shown != null && key.equals(iv.getTag(R.id.tag_art))) shown.run();
         };
         if (keepOld) fetchUrgent(c, uri, px, done);
         else fetch(c, uri, px, done, () -> key.equals(iv.getTag(R.id.tag_art)));

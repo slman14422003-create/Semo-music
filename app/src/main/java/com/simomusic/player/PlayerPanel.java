@@ -86,6 +86,7 @@ public final class PlayerPanel extends FrameLayout {
         addView(scrim, new LayoutParams(-1, -1));
 
         col = new LinearLayout(d);
+        col.setHasOverlappingRendering(false);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(Ui.dp(a, 22), Ui.dp(a, 8), Ui.dp(a, 22), Ui.dp(a, 18));
 
@@ -266,22 +267,12 @@ public final class PlayerPanel extends FrameLayout {
 
     // ------------------------------------------------------------------ internals
 
-    /** While the sheet moves it is drawn once into a layer, so dragging and flinging stay at full frame rate. */
     private void layer(boolean on) {
-        int want = on ? LAYER_TYPE_HARDWARE : LAYER_TYPE_NONE;
-        if (getLayerType() != want) setLayerType(want, null);
+        if (getLayerType() != LAYER_TYPE_NONE) setLayerType(LAYER_TYPE_NONE, null);
         if (col.getLayerType() != LAYER_TYPE_NONE) col.setLayerType(LAYER_TYPE_NONE, null);
         if (Gest.busy != on) {
             Gest.busy = on;
-            if (!on) poke(act.getWindow().getDecorView());
-        }
-    }
-
-    private static void poke(View v) {
-        v.invalidate();
-        if (v instanceof android.view.ViewGroup) {
-            android.view.ViewGroup g = (android.view.ViewGroup) v;
-            for (int i = 0; i < g.getChildCount(); i++) poke(g.getChildAt(i));
+            if (!on) Gest.kick(this);
         }
     }
 
@@ -663,6 +654,10 @@ public final class PlayerPanel extends FrameLayout {
                 .setInterpolator(Motion.EXIT).withEndAction(() -> {
                     MediaController m = Pb.get();
                     if (m != null) {
+                        int ti = next ? m.getNextMediaItemIndex() : m.getPreviousMediaItemIndex();
+                        if (ti >= 0 && ti < m.getMediaItemCount()) {
+                            Art.load(act, m.getMediaItemAt(ti).mediaMetadata.artworkUri, np.art, np.artPx(), true);
+                        }
                         if (next) m.seekToNext();
                         else m.seekToPrevious();
                     }

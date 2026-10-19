@@ -34,6 +34,7 @@ public final class Backdrop {
         Paint p = new Paint(Paint.FILTER_BITMAP_FLAG);
         p.setColorFilter(new ColorMatrixColorFilter(cm));
         new Canvas(out).drawBitmap(b, 0f, 0f, p);
+        out.prepareToDraw();
         return out;
     }
 
@@ -55,7 +56,7 @@ public final class Backdrop {
                 bg.animate().alpha(0f).setDuration(Motion.SHORT).start();
                 return;
             }
-            Art.HERO.execute(() -> {
+            Art.FX.execute(() -> {
                 final Bitmap small = soft(bmp);
                 MAIN.post(() -> {
                     if (!key.equals(bg.getTag(R.id.tag_art))) return;

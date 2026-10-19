@@ -23,7 +23,8 @@ import java.util.List;
 @OptIn(markerClass = UnstableApi.class)
 public final class BtAudio {
     public static final String K_PIN = "bt_pin", K_OPT = "bt_opt", K_PROFILE = "bt_profile", K_BOOST = "bt_boost",
-            K_COMP = "bt_comp", K_WIDE = "bt_wide", K_AUTO = "bt_auto", K_EQ = "bt_eq", K_VBASS = "bt_vbass", K_ALL = "bt_all";
+            K_COMP = "bt_comp", K_WIDE = "bt_wide", K_AUTO = "bt_auto", K_EQ = "bt_eq", K_VBASS = "bt_vbass", K_ALL = "bt_all",
+            K_CONTOUR = "bt_contour", K_SMOOTH = "bt_smooth";
     /** Profiles 0-4 are built in, 5 is the user's own 10-band curve. */
     public static final int PROFILES = 6, CUSTOM = 5;
 
@@ -46,6 +47,7 @@ public final class BtAudio {
     private final Handler h = new Handler(Looper.getMainLooper());
     private int pinnedId = -1;
     private long startedAt;
+    private int lastVol = -1;
 
     private final AudioDeviceCallback devices = new AudioDeviceCallback() {
         @Override
@@ -73,6 +75,23 @@ public final class BtAudio {
     };
 
     private final Runnable applyRun = this::applyNow;
+
+    private final Runnable volPoll = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (am != null && contour(app)) {
+                    int v = am.getStreamVolume(AudioManager.STREAM_MUSIC);
+                    if (v != lastVol) {
+                        lastVol = v;
+                        schedule();
+                    }
+                }
+            } catch (RuntimeException ignored) {
+            }
+            h.postDelayed(this, 1000);
+        }
+    };
 
     private BtAudio(Context app, ExoPlayer player) {
         this.app = app;
@@ -103,6 +122,7 @@ public final class BtAudio {
     private void start() {
         startedAt = SystemClock.uptimeMillis();
         if (am != null) am.registerAudioDeviceCallback(devices, h);
+        h.postDelayed(volPoll, 1000);
         schedule();
     }
 
@@ -153,6 +173,8 @@ public final class BtAudio {
         p.comp = comp(c);
         p.wide = wide(c);
         p.vbass = vbass(c);
+        p.smooth = smooth(c);
+        p.contour = contour(c) ? contourLevel(c) : 0f;
         p.ceilingDb = -1.5f;
         return p;
     }
@@ -177,6 +199,28 @@ public final class BtAudio {
 
     public static boolean vbass(Context c) {
         return Store.flag(c, K_VBASS, true);
+    }
+
+    public static boolean contour(Context c) {
+        return Store.flag(c, K_CONTOUR, true);
+    }
+
+    public static boolean smooth(Context c) {
+        return Store.flag(c, K_SMOOTH, true);
+    }
+
+    static float contourLevel(Context c) {
+        try {
+            AudioManager m = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+            if (m == null) return 0f;
+            int max = m.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+            if (max <= 0) return 0f;
+            float f = m.getStreamVolume(AudioManager.STREAM_MUSIC) / (float) max;
+            float v = Math.max(0f, Math.min(1f, (0.55f - f) / 0.45f));
+            return Math.round(v * 20f) / 20f;
+        } catch (RuntimeException e) {
+            return 0f;
+        }
     }
 
     public static boolean all(Context c) {
@@ -206,7 +250,8 @@ public final class BtAudio {
 
     public static boolean isKey(String k) {
         return K_PIN.equals(k) || K_OPT.equals(k) || K_PROFILE.equals(k) || K_BOOST.equals(k) || K_COMP.equals(k)
-                || K_WIDE.equals(k) || K_AUTO.equals(k) || K_EQ.equals(k) || K_VBASS.equals(k) || K_ALL.equals(k);
+                || K_WIDE.equals(k) || K_AUTO.equals(k) || K_EQ.equals(k) || K_VBASS.equals(k) || K_ALL.equals(k)
+                || K_CONTOUR.equals(k) || K_SMOOTH.equals(k);
     }
 
     /** The user's own curve (dB per band); starts as a copy of the built-in one that was selected. */

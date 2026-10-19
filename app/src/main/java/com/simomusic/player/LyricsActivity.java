@@ -56,6 +56,25 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
     private volatile String currentKey = "";
     private android.net.Uri audioUri;
     private volatile boolean aiBusy;
+    private TextView loadCap;
+    private int stageRes;
+    private long stageSince;
+    private final Runnable stageTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!aiBusy || loadCap == null || isDestroyed() || stageRes == 0) return;
+            long s = (android.os.SystemClock.elapsedRealtime() - stageSince) / 1000;
+            loadCap.setText(getString(stageRes) + String.format(java.util.Locale.US, "  %d:%02d", s / 60, s % 60));
+            h.postDelayed(this, 1000);
+        }
+    };
+
+    private void setStage(int res) {
+        stageRes = res;
+        stageSince = android.os.SystemClock.elapsedRealtime();
+        h.removeCallbacks(stageTick);
+        stageTick.run();
+    }
     private long durMs, lastSec = -1, lastTotal = -1;
     private int active = -1;
     private boolean following = true, started, ticking;
@@ -530,9 +549,18 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         badge.setVisibility(View.GONE);
         showState(S_LOAD);
         Ui.toast(this, R.string.ai_gen_working);
+        stageRes = 0;
         AiLyrics.run(getApplicationContext(), k, audioUri, durMs, null, apiKey,
-                () -> isDestroyed() || !k.equals(currentKey), (l, status) -> {
+                () -> isDestroyed() || !k.equals(currentKey),
+                st -> {
+                    if (isDestroyed() || !aiBusy) return;
+                    setStage(st == AiLyrics.STAGE_DECODE ? R.string.ai_stage_decode
+                            : st == AiLyrics.STAGE_ONLINE ? R.string.ai_stage_online : R.string.ai_stage_phone);
+                },
+                (l, status) -> {
                     aiBusy = false;
+                    stageRes = 0;
+                    h.removeCallbacks(stageTick);
                     if (isDestroyed() || !k.equals(currentKey)) return;
                     if (status == AiLyrics.DONE && l != null) {
                         Ui.toast(this, R.string.ai_gen_done);
@@ -543,7 +571,8 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                             : status == AiLyrics.LIMIT ? R.string.ai_gen_limit
                             : status == AiLyrics.WEAK ? R.string.ai_gen_weak : R.string.ai_sync_failed;
                     if (status == AiLyrics.BAD_KEY) Store.prefs(this).edit().remove(KEY_PREF).apply();
-                    Ui.toast(this, msg);
+                    String why = AiLyrics.lastError;
+                    Ui.toast(this, msg == R.string.ai_sync_failed && why != null ? getString(msg) + " (" + why + ")" : getString(msg));
                     showState(S_MISS);
                 });
     }
@@ -711,6 +740,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
             stateBox.addView(sk, Ui.lp(-2, -2));
             TextView cap = Ui.text(d, getString(R.string.lyrics_loading), 14, R.color.text_secondary);
             cap.setGravity(Gravity.CENTER);
+            loadCap = cap;
             LinearLayout.LayoutParams cl = Ui.lp(-2, -2);
             cl.gravity = Gravity.CENTER_HORIZONTAL;
             cl.topMargin = Ui.dp(d, 26);

@@ -420,4 +420,7 @@
     <string name="ai_gen_bad_key">The API key was rejected. Check it and try again</string>
     <string name="ai_gen_limit">Free limit reached for now. Try again later</string>
     <string name="ai_gen_weak">Could not make out enough words in this song</string>
+    <string name="ai_stage_decode">Reading the song…</string>
+    <string name="ai_stage_online">Uploading and transcribing online…</string>
+    <string name="ai_stage_phone">Transcribing on this phone (a few minutes)…</string>
 </resources>

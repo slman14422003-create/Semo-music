@@ -444,4 +444,7 @@
     <string name="ai_gen_bad_key">تم رفض المفتاح. تأكد منه وحاول مرة أخرى</string>
     <string name="ai_gen_limit">وصلت للحد المجاني حالياً. حاول لاحقاً</string>
     <string name="ai_gen_weak">لم أستطع تمييز كلمات كافية في هذه الأغنية</string>
+    <string name="ai_stage_decode">جارٍ قراءة الأغنية…</string>
+    <string name="ai_stage_online">جارٍ الرفع والتحويل إلى نص أونلاين…</string>
+    <string name="ai_stage_phone">جارٍ التحويل إلى نص على الهاتف (عدة دقائق)…</string>
 </resources>

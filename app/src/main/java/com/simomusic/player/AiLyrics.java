@@ -19,23 +19,36 @@ public final class AiLyrics {
         void done(LyricsRepo.Lyrics l, int status);
     }
 
+    public static final int STAGE_DECODE = 0, STAGE_ONLINE = 1, STAGE_PHONE = 2;
+
+    public interface Stage {
+        void at(int stage);
+    }
+
+    /** Short description of the last failure, shown to the user so problems can be diagnosed. */
+    public static volatile String lastError = null;
+
     /** apiKey != null -> online (Groq); apiKey == null -> on this phone (Whisper). */
     public static void run(Context c, String key, Uri audio, long durMs, String lang, String apiKey,
-                           java.util.function.BooleanSupplier cancelled, Cb cb) {
+                           java.util.function.BooleanSupplier cancelled, Stage stage, Cb cb) {
         final Context app = c.getApplicationContext();
         Thread t = new Thread(() -> {
             LyricsRepo.Lyrics res = null;
             int st = FAILED;
+            lastError = null;
             try {
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
                 WhisperEngine local = new WhisperEngine();
                 if (apiKey == null && !local.ready(app)) {
                     st = NO_ENGINE;
                 } else {
+                    Bg.main(() -> stage.at(STAGE_DECODE));
                     short[] pcm = AudioPcm.decode16kMono(app, audio, cancelled);
                     if (pcm == null || cancelled.getAsBoolean()) {
                         st = CANCELLED;
                     } else {
+                        final int next = apiKey != null ? STAGE_ONLINE : STAGE_PHONE;
+                        Bg.main(() -> stage.at(next));
                         List<LyricsAligner.Word> heard = apiKey != null
                                 ? GroqTranscriber.transcribe(apiKey, pcm, lang)
                                 : local.transcribePhrases(app, pcm, lang);
@@ -50,8 +63,10 @@ public final class AiLyrics {
                 }
             } catch (GroqTranscriber.ApiException e) {
                 st = e.code == 401 ? BAD_KEY : (e.code == 429 ? LIMIT : FAILED);
+                lastError = "HTTP " + e.code;
             } catch (Throwable e) {
                 CrashGuard.nonFatal("ai lyrics", e);
+                lastError = e.getClass().getSimpleName() + (e.getMessage() != null ? ": " + e.getMessage() : "");
             }
             final LyricsRepo.Lyrics fr = res;
             final int fs = st;

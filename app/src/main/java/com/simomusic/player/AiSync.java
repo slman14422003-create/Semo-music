@@ -23,7 +23,7 @@ public final class AiSync {
             LyricsRepo.Lyrics res = null;
             int st = FAILED;
             try {
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
                 if (eng == null || !eng.ready(app)) {
                     st = NO_ENGINE;
                 } else {

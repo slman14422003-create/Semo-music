@@ -398,4 +398,13 @@
     <string name="lyrics_size_l">Large</string>
     <string name="lyrics_estimated">Estimated sync. Tap the line being sung to correct it, long-press a line to jump to it</string>
     <string name="lyrics_adjusted">Sync adjusted</string>
+    <string name="ai_sync_tap">Tap to sync with AI</string>
+    <string name="ai_sync_download_q">Syncing with AI needs a one-time download of a speech model (about %1$d MB). Download it now?</string>
+    <string name="ai_sync_download">Download</string>
+    <string name="ai_sync_downloading">Downloading model… %1$d%%</string>
+    <string name="ai_sync_dl_failed">Download failed. Check your connection and try again</string>
+    <string name="ai_sync_working">Syncing with AI… this can take a minute or two</string>
+    <string name="ai_sync_done">Lyrics synced</string>
+    <string name="ai_sync_weak">Could not recognise enough of the song to sync it</string>
+    <string name="ai_sync_failed">AI sync failed</string>
 </resources>

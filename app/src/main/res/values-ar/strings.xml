@@ -422,4 +422,13 @@
     <string name="lyrics_size_l">كبير</string>
     <string name="lyrics_estimated">تزامن تقديري. اضغط على السطر الذي يُغنّى الآن لتصحيحه، واضغط مطولاً على سطر للانتقال إليه</string>
     <string name="lyrics_adjusted">تم ضبط التزامن</string>
+    <string name="ai_sync_tap">اضغط للمزامنة بالذكاء الاصطناعي</string>
+    <string name="ai_sync_download_q">المزامنة بالذكاء الاصطناعي تحتاج تنزيل نموذج صوتي مرة واحدة (حوالي %1$d ميغابايت). تنزيله الآن؟</string>
+    <string name="ai_sync_download">تنزيل</string>
+    <string name="ai_sync_downloading">جارٍ تنزيل النموذج… %1$d%%</string>
+    <string name="ai_sync_dl_failed">فشل التنزيل. تأكد من الاتصال وحاول مرة أخرى</string>
+    <string name="ai_sync_working">جارٍ المزامنة بالذكاء الاصطناعي… قد تستغرق دقيقة أو دقيقتين</string>
+    <string name="ai_sync_done">تمت مزامنة الكلمات</string>
+    <string name="ai_sync_weak">لم أستطع التعرف على كلمات كافية من الأغنية لمزامنتها</string>
+    <string name="ai_sync_failed">فشلت المزامنة بالذكاء الاصطناعي</string>
 </resources>

@@ -127,6 +127,10 @@ public final class LyricsRepo {
         return new Lyrics(true, false, t, lines, source, true, an);
     }
 
+    public static Lyrics aligned(Lyrics l, Anchors an, long durMs) {
+        return build(l.lines, an, durMs, "ai");
+    }
+
     public static Lyrics anchored(Lyrics l, int idx, long posMs, long durMs) {
         java.util.TreeMap<Integer, Long> m = new java.util.TreeMap<>();
         double mul = 1;
@@ -519,7 +523,7 @@ public final class LyricsRepo {
         long dd = 0;
         if (durKnown) {
             dd = Math.abs(Math.round(d) - Math.round(q.durMs / 1000.0));
-            if (dd > 8) return -1;
+            if (dd > 12) return -1;
             if (dd > 3 && ts < 3) return -1;
         }
         if (!artistKnown && (ts < 3 || !durKnown || dd > 3)) return -1;

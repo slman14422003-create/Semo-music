@@ -332,7 +332,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
             applyTint(0);
             return;
         }
-        Art.fetch(getContext(), uri, Ui.dp(getContext(), 54), b -> {
+        Art.fetchUrgent(getContext(), uri, Ui.dp(getContext(), 54), b -> {
             if (!key.equals(lastArt)) return;
             int col = 0;
             if (b != null) {
@@ -411,7 +411,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         String key = String.valueOf(it.mediaMetadata.artworkUri);
         if (!key.equals(lastArt)) {
             lastArt = key;
-            Art.load(getContext(), it.mediaMetadata.artworkUri, art, Ui.dp(getContext(), 54));
+            Art.load(getContext(), it.mediaMetadata.artworkUri, art, Ui.dp(getContext(), 54), true);
             tintFor(it.mediaMetadata.artworkUri, key);
             Prefetch.upcoming(getContext(), m, Ui.dp(getContext(), 54), Ui.dp(getContext(), 54));
         }

@@ -56,6 +56,33 @@ public final class Art {
             return t;
         }
     });
+    public static final ExecutorService HERO = new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS,
+            new java.util.concurrent.LinkedBlockingQueue<Runnable>(), new ThreadFactory() {
+        @Override
+        public Thread newThread(final Runnable r) {
+            Thread t = new Thread(() -> {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT);
+                r.run();
+            }, "cover-hero");
+            t.setDaemon(true);
+            return t;
+        }
+    });
+
+    private static final LruCache<String, Bitmap> MASTER = new LruCache<String, Bitmap>((int) Math.min(12L * 1024 * 1024, Runtime.getRuntime().maxMemory() / 16)) {
+        @Override
+        protected int sizeOf(String k, Bitmap b) {
+            return b.getByteCount();
+        }
+    };
+
+    private static final class Job {
+        final java.util.ArrayList<Cb> cbs = new java.util.ArrayList<>();
+        boolean urgent;
+    }
+
+    private static final java.util.HashMap<String, Job> PENDING = new java.util.HashMap<>();
+
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final Set<String> MISSING = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
     private static final LruCache<String, Bitmap> CACHE = new LruCache<String, Bitmap>((int) Math.min(48L * 1024 * 1024, Runtime.getRuntime().maxMemory() / 8)) {
@@ -69,9 +96,11 @@ public final class Art {
     public static void trim(boolean all) {
         if (all) {
             CACHE.evictAll();
+            MASTER.evictAll();
             MISSING.clear();
         } else {
             CACHE.trimToSize(CACHE.maxSize() / 2);
+            MASTER.evictAll();
         }
     }
 
@@ -106,13 +135,40 @@ public final class Art {
         }
     }
 
+    private static Bitmap decode(Context c, Uri uri, int px) {
+        String uk = String.valueOf(uri);
+        if (px >= 200) {
+            Bitmap m = MASTER.get(uk);
+            if (m != null && !m.isRecycled() && Math.max(m.getWidth(), m.getHeight()) >= px) {
+                int big = Math.max(m.getWidth(), m.getHeight());
+                if (big <= px + px / 20) return m;
+                try {
+                    float k = px / (float) big;
+                    return Bitmap.createScaledBitmap(m, Math.max(1, Math.round(m.getWidth() * k)), Math.max(1, Math.round(m.getHeight() * k)), true);
+                } catch (RuntimeException ignored) {
+                }
+            }
+        }
+        Bitmap r = loadSync(c, uri, px);
+        if (r != null && px >= 200) MASTER.put(uk, r);
+        return r;
+    }
+
     /** Async, cached; the callback runs on the main thread with null when the file has no art. */
     public static void fetch(Context c, final Uri uri, final int px, final Cb cb) {
-        fetch(c, uri, px, cb, null);
+        fetch(c, uri, px, cb, null, false);
     }
 
     /** `wanted` is asked again just before the work starts: a row that was scrolled away meanwhile costs nothing. */
     public static void fetch(Context c, final Uri uri, final int px, final Cb cb, final BooleanSupplier wanted) {
+        fetch(c, uri, px, cb, wanted, false);
+    }
+
+    public static void fetchUrgent(Context c, final Uri uri, final int px, final Cb cb) {
+        fetch(c, uri, px, cb, null, true);
+    }
+
+    private static void fetch(Context c, final Uri uri, final int px, final Cb cb, final BooleanSupplier wanted, final boolean urgent) {
         final Context app = c.getApplicationContext();
         final String key = uri + "@" + px;
         Bitmap hit = CACHE.get(key);
@@ -124,23 +180,59 @@ public final class Art {
             cb.got(null);
             return;
         }
-        EX.execute(() -> {
+        final boolean share = wanted == null && Looper.myLooper() == Looper.getMainLooper();
+        final Job job;
+        if (share) {
+            Job old = PENDING.get(key);
+            if (old != null && (old.urgent || !urgent)) {
+                old.cbs.add(cb);
+                return;
+            }
+            job = new Job();
+            job.urgent = urgent;
+            if (old != null) job.cbs.addAll(old.cbs);
+            job.cbs.add(cb);
+            PENDING.put(key, job);
+        } else {
+            job = null;
+        }
+        (urgent ? HERO : EX).execute(() -> {
             if (wanted != null && !wanted.getAsBoolean()) return;
-            Bitmap rr = null;
-            try {
-                rr = loadSync(app, uri, px);
-            } catch (Throwable t) {          // out of memory, corrupt tags, vanished file: show the placeholder instead of crashing
-                CrashGuard.nonFatal("cover art", t);
+            Bitmap rr = CACHE.get(key);
+            if (rr == null) {
+                try {
+                    rr = decode(app, uri, px);
+                } catch (Throwable t) {
+                    CrashGuard.nonFatal("cover art", t);
+                }
             }
             final Bitmap r = rr;
             if (r != null) CACHE.put(key, r);
             else MISSING.add(key);
-            MAIN.post(() -> cb.got(r));
+            MAIN.post(() -> {
+                if (job == null) {
+                    cb.got(r);
+                    return;
+                }
+                if (PENDING.get(key) != job) return;
+                PENDING.remove(key);
+                for (Cb x : job.cbs) {
+                    try {
+                        x.got(r);
+                    } catch (RuntimeException e) {
+                        CrashGuard.nonFatal("cover callback", e);
+                    }
+                }
+            });
         });
     }
 
     /** Loads art into an ImageView, guarding against recycled rows. */
     public static void load(Context c, final Uri uri, final ImageView iv, final int px) {
+        load(c, uri, iv, px, false);
+    }
+
+    public static void load(Context c, final Uri uri, final ImageView iv, final int px, final boolean keepOld) {
         final String key = String.valueOf(uri);
         if (key.equals(iv.getTag(R.id.tag_art)) && iv.getTag(R.id.tag_art_ok) != null) return;
         iv.setTag(R.id.tag_art, key);
@@ -153,14 +245,18 @@ public final class Art {
                 return;
             }
         }
-        show(iv, null, px);
+        boolean hasPicture = keepOld && iv.getDrawable() instanceof android.graphics.drawable.BitmapDrawable;
+        if (!hasPicture || uri == null) show(iv, null, px);
         if (uri == null) return;
-        fetch(c, uri, px, b -> {
+        Cb done = b -> {
+            if (b == null && hasPicture && key.equals(iv.getTag(R.id.tag_art))) show(iv, null, px);
             if (b != null && key.equals(iv.getTag(R.id.tag_art))) {
                 show(iv, b, px);
                 iv.setTag(R.id.tag_art_ok, Boolean.TRUE);
             }
-        }, () -> key.equals(iv.getTag(R.id.tag_art)));
+        };
+        if (keepOld) fetchUrgent(c, uri, px, done);
+        else fetch(c, uri, px, done, () -> key.equals(iv.getTag(R.id.tag_art)));
     }
 
     private static final int[][] GRAD = {

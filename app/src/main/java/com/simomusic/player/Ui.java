@@ -82,6 +82,16 @@ public final class Ui {
         return Typeface.create(Typeface.DEFAULT, bold ? Typeface.BOLD : Typeface.NORMAL);
     }
 
+    private static Typeface med;
+
+    public static Typeface medium() {
+        if (med == null) {
+            med = android.os.Build.VERSION.SDK_INT >= 28 ? Typeface.create(Typeface.DEFAULT, 500, false)
+                    : Typeface.create("sans-serif-medium", Typeface.NORMAL);
+        }
+        return med;
+    }
+
     public static boolean isNight(Context c) {
         return (c.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
                 == android.content.res.Configuration.UI_MODE_NIGHT_YES;
@@ -334,6 +344,20 @@ public final class Ui {
         return b;
     }
 
+    public static ImageButton flatPlain(Context c, int res, int sizeDp, int desc, View.OnClickListener l) {
+        ImageButton b = new ImageButton(c);
+        b.setImageResource(res);
+        b.setBackgroundResource(R.drawable.bg_ripple_round);
+        b.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        int p = dp(c, sizeDp / 4);
+        b.setPadding(p, p, p, p);
+        tint(b, R.color.text_secondary);
+        b.setLayoutParams(lp(dp(c, sizeDp), dp(c, sizeDp)));
+        if (desc != 0) b.setContentDescription(c.getString(desc));
+        if (l != null) b.setOnClickListener(haptic(l));
+        return b;
+    }
+
     /** The big white play / pause circle. */
     public static ImageButton bigPlay(Context c, View.OnClickListener l) {
         ImageButton b = new ImageButton(c);
@@ -368,10 +392,10 @@ public final class Ui {
         b.setBackgroundResource(primary ? R.drawable.btn_primary : R.drawable.btn_secondary);
         int col = color(c, primary ? R.color.on_accent : R.color.text_primary);
         b.setTextColor(col);
-        b.setTextSize(14);
+        b.setTextSize(15);
         b.setTypeface(Typeface.DEFAULT_BOLD);
-        b.setMinHeight(dp(c, 46));
-        b.setMinimumHeight(dp(c, 46));
+        b.setMinHeight(dp(c, 50));
+        b.setMinimumHeight(dp(c, 50));
         b.setPaddingRelative(dp(c, 18), 0, dp(c, 20), 0);
         if (iconRes != 0) {
             Drawable d = DrawableCompat.wrap(ContextCompat.getDrawable(c, iconRes).mutate());
@@ -426,10 +450,10 @@ public final class Ui {
     }
 
     public static TextView section(Context c, int textRes) {
-        TextView t = text(c, c.getString(textRes), 14, R.color.accent_text);
+        TextView t = text(c, c.getString(textRes), 13, R.color.accent_text);
         t.setTypeface(Typeface.DEFAULT_BOLD);
-        t.setLetterSpacing(0.04f);
-        t.setPaddingRelative(dp(c, 26), dp(c, 22), dp(c, 26), dp(c, 8));
+        t.setLetterSpacing(0.06f);
+        t.setPaddingRelative(dp(c, 28), dp(c, 24), dp(c, 28), dp(c, 8));
         return t;
     }
 
@@ -440,7 +464,7 @@ public final class Ui {
         bar.setPadding(dp(a, 12), dp(a, 10), dp(a, 12), dp(a, 8));
         bar.addView(icon(a, backIcon, R.string.back, v -> a.finish()));
         TextView t = text(a, title, 20, R.color.text_primary);
-        t.setTypeface(Ui.titleFace(false));
+        t.setTypeface(Ui.medium());
         t.setGravity(Gravity.CENTER);
         t.setSingleLine(true);
         t.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -465,8 +489,13 @@ public final class Ui {
     private static final java.util.HashMap<String, android.graphics.drawable.Drawable.ConstantState> SHAPES = new java.util.HashMap<>();
 
     public static void shape(Context c, View card, boolean first, boolean last, int fillRes) {
+        shape(c, card, first, last, fillRes, 0);
+    }
+
+    public static void shape(Context c, View card, boolean first, boolean last, int fillRes, int strokeCol) {
         int fillCol = color(c, fillRes), ripCol = color(c, R.color.ripple), bigPx = c.getResources().getDimensionPixelSize(R.dimen.radius_card);
-        String key = first + "," + last + "," + fillCol + "," + ripCol + "," + bigPx;
+        int line = strokeCol != 0 ? strokeCol : color(c, R.color.row_stroke);
+        String key = first + "," + last + "," + fillCol + "," + ripCol + "," + bigPx + "," + line;
         android.graphics.drawable.Drawable.ConstantState cs = SHAPES.get(key);
         if (cs != null) {
             card.setBackground(cs.newDrawable(c.getResources()));
@@ -477,6 +506,7 @@ public final class Ui {
         float[] r = {top, top, top, top, bottom, bottom, bottom, bottom};
         GradientDrawable fill = new GradientDrawable();
         fill.setColor(fillCol);
+        fill.setStroke(Math.max(1, dp(c, 1) / 2), line);
         fill.setCornerRadii(r);
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(0xFFFFFFFF);
@@ -568,7 +598,7 @@ public final class Ui {
 
     private static FrameLayout rowShell(Context c, LinearLayout card) {
         FrameLayout w = new FrameLayout(c);
-        w.setPadding(dp(c, 14), dp(c, 1), dp(c, 14), dp(c, 1));
+        w.setPadding(dp(c, 16), dp(c, 2), dp(c, 16), dp(c, 2));
         card.setId(R.id.card);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
@@ -582,7 +612,9 @@ public final class Ui {
     private static LinearLayout textColumn(Context c, CharSequence title, CharSequence sub) {
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
-        col.addView(text(c, title, 16, R.color.text_primary));
+        TextView tt = text(c, title, 16, R.color.text_primary);
+        tt.setTypeface(medium());
+        col.addView(tt);
         if (sub != null) {
             TextView s = text(c, sub, 13, R.color.text_secondary);
             s.setPadding(0, dp(c, 3), 0, 0);
@@ -723,7 +755,7 @@ public final class Ui {
             g.setCornerRadius(dp(c, 100));
             g.setColor(color(c, R.color.surface));
             p.setBackground(g);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(c, 46), 1f);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(c, 50), 1f);
             if (i > 0) lp.setMarginStart(dp(c, 10));
             pills.addView(p, lp);
         }
@@ -731,7 +763,7 @@ public final class Ui {
         int[] w1 = {170, 210, 140, 190, 160, 220, 150, 200};
         for (int i = 0; i < w1.length; i++) {
             FrameLayout shell = new FrameLayout(c);
-            shell.setPadding(dp(c, 14), dp(c, 1), dp(c, 14), dp(c, 1));
+            shell.setPadding(dp(c, 16), dp(c, 2), dp(c, 16), dp(c, 2));
             LinearLayout card = new LinearLayout(c);
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPaddingRelative(dp(c, 12), dp(c, 10), dp(c, 12), dp(c, 10));
@@ -770,7 +802,7 @@ public final class Ui {
     /** Compact on/off pills in rows of three inside one rounded card (used for the audio formats). */
     public static View chipGrid(final Context c, final String[] names, final String[] desc, final boolean[] on, final ChipToggle cb) {
         FrameLayout shell = new FrameLayout(c);
-        shell.setPadding(dp(c, 14), dp(c, 1), dp(c, 14), dp(c, 1));
+        shell.setPadding(dp(c, 16), dp(c, 2), dp(c, 16), dp(c, 2));
         LinearLayout card = new LinearLayout(c);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(c, 10), dp(c, 10), dp(c, 10), dp(c, 10));

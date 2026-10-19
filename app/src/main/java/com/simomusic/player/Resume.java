@@ -18,18 +18,49 @@ public final class Resume {
     /** The player service went away: the next app open may put the saved queue back again. */
     public static void reset() {
         restored = false;
+        idsDirty = true;
     }
     private static final int MAX = 1000;
 
-    /** Called from the player service; cheap enough to call on every song change / pause. */
+    private static String idsCache = "";
+    private static boolean idsDirty = true;
+    private static final android.os.Handler H = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static Runnable pending;
+
+    public static void queueChanged() {
+        idsDirty = true;
+    }
+
+    public static void saveSoon(final Context c, final Player p) {
+        if (pending != null) H.removeCallbacks(pending);
+        final Context app = c.getApplicationContext();
+        pending = () -> {
+            pending = null;
+            try {
+                save(app, p);
+            } catch (RuntimeException e) {
+                CrashGuard.nonFatal("resume save", e);
+            }
+        };
+        H.postDelayed(pending, 600);
+    }
+
     public static void save(Context c, Player p) {
+        if (pending != null) {
+            H.removeCallbacks(pending);
+            pending = null;
+        }
         int n = p.getMediaItemCount();
         if (n == 0) return;
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < Math.min(n, MAX); i++) sb.append(p.getMediaItemAt(i).mediaId).append(',');
+        if (idsDirty) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < Math.min(n, MAX); i++) sb.append(p.getMediaItemAt(i).mediaId).append(',');
+            idsCache = sb.toString();
+            idsDirty = false;
+        }
         androidx.media3.common.MediaItem cur = p.getCurrentMediaItem();
         Store.prefs(c).edit()
-                .putString("rs_ids", sb.toString())
+                .putString("rs_ids", idsCache)
                 .putString("rs_cur", cur == null ? "" : cur.mediaId)
                 .putLong("rs_pos", Math.max(0, p.getCurrentPosition()))
                 .putBoolean("rs_shuffle", p.getShuffleModeEnabled())

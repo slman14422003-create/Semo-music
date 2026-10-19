@@ -307,7 +307,7 @@ public final class QueueSheet {
             Context c = parent.getContext();
             FrameLayout root = new FrameLayout(c);
             root.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            root.setPadding(Ui.dp(c, 14), Ui.dp(c, 1), Ui.dp(c, 14), Ui.dp(c, 1));
+            root.setPadding(Ui.dp(c, 16), Ui.dp(c, 2), Ui.dp(c, 16), Ui.dp(c, 2));
             LinearLayout card = new LinearLayout(c);
             card.setGravity(Gravity.CENTER_VERTICAL);
             card.setPaddingRelative(Ui.dp(c, 12), Ui.dp(c, 9), Ui.dp(c, 4), Ui.dp(c, 9));

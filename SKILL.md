@@ -37,3 +37,11 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 
 # Seek time label
 - NowPlaying: elapsed-time label no longer changes color while scrubbing and scales from its start edge (pivot) so it is never clipped at the screen edge.
+
+# Smoothness + lock screen + design pass
+- Cover loading (Art.java): Art.HERO (2 threads, normal priority) serves the cover that is on screen (Art.fetchUrgent / Art.load with keepOld): NowPlaying cover and tint, Backdrop, MiniPlayer, ArtLoader (notification / system lock screen). List thumbnails stay on Art.EX (background priority, newest first).
+- Art.fetch shares one decode per uri+size between screens (PENDING, main thread only; an urgent request takes over a slow prefetch) and Art.decode downsizes the last big decode (MASTER) instead of reading the file again for the backdrop (same px as the cover) and the 512px notification art.
+- Art.load(..., keepOld=true) keeps the previous cover until the new one is decoded (no placeholder flash on skip). Backdrop.set(c, bg, uri, px) cross-fades with a TransitionDrawable instead of fading to nothing and back.
+- PlayerService: Resume.saveSoon coalesces the 3 saves a skip fires (id list cached until Resume.queueChanged), PlayStats.save is batched 4 s and serialised on a background thread (PlayStats.flush on stop), extendQueue runs 1.5 s after the transition.
+- WavePainter: idle wave redraws at ~30 fps (postInvalidateDelayed(32)); dragging / easing keep full speed. NowPlaying.seek.setProgress(p, false) (the painter eases by itself).
+- Design: palette tuned (light theme now grey canvas + white cards), radius_card 24dp / inner 8dp / thumb 16dp, Ui.shape adds a hairline row_stroke (playing row gets an accent outline), row spacing 16dp x 2dp, medium weight titles (Ui.medium), 54dp row covers, taller pills (50dp) and segmented control (44dp), bold 32sp home title, Ui.flatPlain for per-row buttons (no press animator per row).

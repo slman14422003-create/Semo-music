@@ -5,8 +5,8 @@
     <integer name="motion_short">200</integer>
     <integer name="motion_base">300</integer>
     <integer name="motion_long">400</integer>
-    <dimen name="radius_inner">6dp</dimen>
-    <dimen name="radius_thumb">14dp</dimen>
-    <dimen name="radius_card">28dp</dimen>
+    <dimen name="radius_inner">8dp</dimen>
+    <dimen name="radius_thumb">16dp</dimen>
+    <dimen name="radius_card">24dp</dimen>
     <dimen name="radius_sheet">32dp</dimen>
 </resources>

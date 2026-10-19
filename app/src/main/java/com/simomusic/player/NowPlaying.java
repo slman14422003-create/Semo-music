@@ -227,6 +227,10 @@ public final class NowPlaying implements Player.Listener {
         Art.show(art, null, artPx);
     }
 
+    public int artPx() {
+        return artPx;
+    }
+
     public void start() {
         started = true;
         Pb.add(this);
@@ -321,7 +325,7 @@ public final class NowPlaying implements Player.Listener {
         if (!key.equals(lastArt)) {
             boolean first = "\u0000".equals(lastArt);
             lastArt = key;
-            Art.load(c, au, art, artPx);
+            Art.load(c, au, art, artPx, true);
             Prefetch.upcoming(c, m, artPx);
             tintFromArt(au, key);
             if (!first && !quietArt) {
@@ -352,7 +356,7 @@ public final class NowPlaying implements Player.Listener {
             applyTint(0);
             return;
         }
-        Art.fetch(c, au, artPx, bmp -> {
+        Art.fetchUrgent(c, au, artPx, bmp -> {
             if (!key.equals(lastArt)) return;
             if (bmp == null) {
                 applyTint(0);
@@ -361,7 +365,7 @@ public final class NowPlaying implements Player.Listener {
             // colorOf() scales the bitmap and scans every pixel; cheap on its own, but doing it here, on the
             // UI thread, right as the cover's entrance animation plays, was dropping frames. Same background
             // pool the cover art itself decodes on, then hand the result back to the main thread.
-            Art.EX.execute(() -> {
+            Art.HERO.execute(() -> {
                 final int col = colorOf(bmp);
                 h.post(() -> {
                     if (key.equals(lastArt)) applyTint(col);
@@ -413,7 +417,7 @@ public final class NowPlaying implements Player.Listener {
                 if (!landed && android.os.SystemClock.uptimeMillis() < pendingUntil) return;
                 pendingSeek = -1;
             }
-            seek.setProgress((int) p, true);
+            seek.setProgress((int) p, false);
             long sec = p / 1000;
             if (sec != lastSec) {
                 lastSec = sec;

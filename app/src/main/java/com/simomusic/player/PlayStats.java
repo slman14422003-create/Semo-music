@@ -65,22 +65,49 @@ public final class PlayStats {
         }
     }
 
-    private static void save(Context c) {
-        JSONObject root = new JSONObject();
-        try {
+    private static final android.os.Handler H = new android.os.Handler(android.os.Looper.getMainLooper());
+    private static final java.util.concurrent.ExecutorService IO = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "stats-save");
+        t.setDaemon(true);
+        t.setPriority(Thread.MIN_PRIORITY);
+        return t;
+    });
+    private static boolean saveQueued;
+
+    private static synchronized void save(final Context c) {
+        if (saveQueued) return;
+        saveQueued = true;
+        final Context app = c.getApplicationContext();
+        H.postDelayed(() -> flush(app), 4000);
+    }
+
+    public static void flush(final Context c) {
+        final Context app = c.getApplicationContext();
+        final java.util.List<long[]> rows = new java.util.ArrayList<>();
+        final int[] hs;
+        synchronized (PlayStats.class) {
+            saveQueued = false;
+            if (cache == null) return;
             for (Map.Entry<Long, Row> e : cache.entrySet()) {
-                JSONArray a = new JSONArray();
-                a.put(e.getValue().plays);
-                a.put(e.getValue().skips);
-                a.put(e.getValue().lastPlayed);
-                for (int v : e.getValue().part) a.put(v);
-                root.put(String.valueOf(e.getKey()), a);
+                Row r = e.getValue();
+                rows.add(new long[]{e.getKey(), r.plays, r.skips, r.lastPlayed, r.part[0], r.part[1], r.part[2], r.part[3]});
             }
-        } catch (JSONException ignored) {
+            hs = hours.clone();
         }
-        JSONArray h = new JSONArray();
-        for (int v : hours) h.put(v);
-        prefs(c).edit().putString("rows", root.toString()).putString("hours", h.toString()).apply();
+        IO.execute(() -> {
+            JSONObject root = new JSONObject();
+            try {
+                for (long[] v : rows) {
+                    JSONArray a = new JSONArray();
+                    for (int i = 1; i < v.length; i++) a.put(v[i]);
+                    root.put(String.valueOf(v[0]), a);
+                }
+            } catch (JSONException ignored) {
+            }
+            JSONArray h = new JSONArray();
+            for (int v : hs) h.put(v);
+            prefs(app).edit().putString("rows", root.toString()).putString("hours", h.toString()).apply();
+        });
     }
 
     private static Row row(long id) {

@@ -42,8 +42,7 @@ final class ArtLoader implements BitmapLoader {
     @Override
     public ListenableFuture<Bitmap> loadBitmap(final Uri uri) {
         final SettableFuture<Bitmap> f = SettableFuture.create();
-        Art.EX.execute(() -> {
-            Bitmap b = Art.loadSync(ctx, uri, 512);
+        Art.fetchUrgent(ctx, uri, 512, b -> {
             if (b != null) f.set(b);
             else f.setException(new IllegalStateException("no cover"));
         });

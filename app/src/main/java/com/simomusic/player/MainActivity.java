@@ -180,8 +180,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         bar.setPaddingRelative(Ui.dp(this, 24), Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 4));
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
-        TextView title = Ui.text(this, getString(R.string.app_name), 34, R.color.text_primary);
-        title.setTypeface(Ui.titleFace(false));
+        TextView title = Ui.text(this, getString(R.string.app_name), 32, R.color.text_primary);
+        title.setTypeface(Ui.titleFace(true));
         title.setOnClickListener(v -> {
             if (rv != null) rv.smoothScrollToPosition(0);
         });
@@ -237,11 +237,11 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         // ---- segmented control
         LinearLayout seg = new LinearLayout(this);
         seg.setBackgroundResource(R.drawable.bg_segment);
-        seg.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
+        seg.setPadding(Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5), Ui.dp(this, 5));
         segSongs = segItem(0);
         segLists = segItem(1);
-        seg.addView(segSongs, new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1f));
-        seg.addView(segLists, new LinearLayout.LayoutParams(0, Ui.dp(this, 40), 1f));
+        seg.addView(segSongs, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        seg.addView(segLists, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
         LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, -2);
         sp.setMargins(Ui.dp(this, 20), Ui.dp(this, 10), Ui.dp(this, 20), Ui.dp(this, 6));
         root.addView(seg, sp);
@@ -364,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private TextView segItem(final int i) {
         TextView t = new TextView(this);
         t.setGravity(Gravity.CENTER);
-        t.setTextSize(14);
+        t.setTextSize(15);
         t.setSingleLine(true);
         t.setOnClickListener(v -> {
             if (tab != i) Ui.tap(v);

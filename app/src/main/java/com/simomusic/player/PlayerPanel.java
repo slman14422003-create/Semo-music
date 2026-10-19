@@ -178,7 +178,7 @@ public final class PlayerPanel extends FrameLayout {
             lastExtrasId = id;
             refreshExtras();
         };
-        np.artCb = u -> Backdrop.set(a, bg, u);
+        np.artCb = u -> Backdrop.set(a, bg, u, np.artPx());
     }
 
     // ------------------------------------------------------------------ public API

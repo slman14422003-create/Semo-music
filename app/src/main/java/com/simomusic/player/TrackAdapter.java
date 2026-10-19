@@ -38,6 +38,8 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         }
     }
 
+    private static final int ART = 54;
+
     public final List<Track> data = new ArrayList<>();
     public final Set<Long> selected = new HashSet<>();
     public boolean select, reorder;
@@ -207,28 +209,29 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         FrameLayout root = new FrameLayout(c);
         root.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         if (type == 1) return new VH(root);
-        root.setPadding(Ui.dp(c, 14), Ui.dp(c, 1), Ui.dp(c, 14), Ui.dp(c, 1));
+        root.setPadding(Ui.dp(c, 16), Ui.dp(c, 2), Ui.dp(c, 16), Ui.dp(c, 2));
         LinearLayout card = new LinearLayout(c);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPaddingRelative(Ui.dp(c, 12), Ui.dp(c, 10), Ui.dp(c, 6), Ui.dp(c, 10));
+        card.setPaddingRelative(Ui.dp(c, 12), Ui.dp(c, 11), Ui.dp(c, 4), Ui.dp(c, 11));
         card.setDuplicateParentStateEnabled(true);
         root.addView(card, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-        ImageView art = Ui.artView(c, 52, 14);
+        ImageView art = Ui.artView(c, ART, 16);
         FrameLayout artBox = new FrameLayout(c);
         artBox.addView(art);
         View scrim = new View(c);
         scrim.setBackgroundColor(0x88000000);
         Ui.round(scrim, c.getResources().getDimensionPixelSize(R.dimen.radius_thumb));
         scrim.setVisibility(View.GONE);
-        artBox.addView(scrim, new FrameLayout.LayoutParams(Ui.dp(c, 52), Ui.dp(c, 52)));
+        artBox.addView(scrim, new FrameLayout.LayoutParams(Ui.dp(c, ART), Ui.dp(c, ART)));
         EqView eq = new EqView(c);
         eq.setVisibility(View.GONE);
         artBox.addView(eq, new FrameLayout.LayoutParams(Ui.dp(c, 18), Ui.dp(c, 18), Gravity.CENTER));
-        card.addView(artBox, Ui.lp(Ui.dp(c, 52), Ui.dp(c, 52)));
+        card.addView(artBox, Ui.lp(Ui.dp(c, ART), Ui.dp(c, ART)));
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
         TextView title = Ui.text(c, "", 16, R.color.text_primary);
+        title.setTypeface(Ui.medium());
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         TextView sub = Ui.text(c, "", 13, R.color.text_secondary);
@@ -249,11 +252,9 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         LinearLayout.LayoutParams kp = Ui.lp(Ui.dp(c, 28), Ui.dp(c, 28));
         kp.setMarginEnd(Ui.dp(c, 10));
         card.addView(check, kp);
-        ImageButton more = Ui.flat(c, R.drawable.ic_more, 48, R.string.more, null);
-        Ui.tint(more, R.color.text_secondary);
+        ImageButton more = Ui.flatPlain(c, R.drawable.ic_more, 48, R.string.more, null);
         card.addView(more);
-        ImageButton handle = Ui.flat(c, R.drawable.ic_sort, 48, R.string.reorder, null);
-        Ui.tint(handle, R.color.text_secondary);
+        ImageButton handle = Ui.flatPlain(c, R.drawable.ic_sort, 48, R.string.reorder, null);
         card.addView(handle);
         final VH h = new VH(root, card, art, title, sub, more, handle, check);
         h.scrim = scrim;
@@ -308,7 +309,7 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
             h.titleColor = tc;
             h.title.setTextColor(tc);
         }
-        Art.load(ctx, t.uri, h.art, Ui.dp(ctx, 52));
+        Art.load(ctx, t.uri, h.art, Ui.dp(ctx, ART));
         // the card background (a ripple drawable) is rebuilt only when its look really changes
         boolean hi = sel || isCur;
         // the current/selected row keeps the same corners as its neighbours (only the colour changes), so the
@@ -317,7 +318,8 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         int shape = (top ? 1 : 0) | (bottom ? 2 : 0) | (hi ? 4 : 0);
         if (shape != h.shapeState) {
             h.shapeState = shape;
-            Ui.shape(ctx, h.card, top, bottom, hi ? R.color.accent_soft : R.color.surface);
+            Ui.shape(ctx, h.card, top, bottom, hi ? R.color.accent_soft : R.color.surface,
+                    hi ? (Ui.color(ctx, R.color.accent) & 0x00FFFFFF) | 0x55000000 : 0);
         }
         boolean mark = isCur && !select;
         if (mark != h.curShown || h.tint == -1) {

@@ -95,7 +95,11 @@ final class WavePainter {
 
         boolean moving = Math.abs(target - shown) > 0.0004f || amp > 0.02f || waving
                 || Math.abs(thumbScale - (dragging ? 1.3f : 1f)) > 0.01f;
-        if (moving && !Gest.busy) v.postInvalidateOnAnimation();
-        else last = 0;
+        boolean easing = Math.abs(target - shown) > 0.0004f || Math.abs(thumbScale - (dragging ? 1.3f : 1f)) > 0.01f
+                || Math.abs(goal - amp) > 0.02f;
+        if (moving && !Gest.busy) {
+            if (easing || dragging) v.postInvalidateOnAnimation();
+            else v.postInvalidateDelayed(32);
+        } else last = 0;
     }
 }

@@ -39,27 +39,42 @@ public final class Backdrop {
 
     /** Shows the cover of the given track as backdrop (cross-fades); null hides it so the default gradient shows. */
     public static void set(Context c, final ImageView bg, final Uri u) {
+        set(c, bg, u, 256);
+    }
+
+    public static void set(final Context c, final ImageView bg, final Uri u, final int px) {
         final String key = String.valueOf(u);
         bg.setTag(R.id.tag_art, key);
         if (u == null) {
             bg.animate().alpha(0f).setDuration(Motion.SHORT).start();
             return;
         }
-        Art.fetch(c, u, 256, bmp -> {
+        Art.fetchUrgent(c, u, px, bmp -> {
             if (!key.equals(bg.getTag(R.id.tag_art))) return;
             if (bmp == null) {
                 bg.animate().alpha(0f).setDuration(Motion.SHORT).start();
                 return;
             }
-            // several bitmap allocations to halve 256px down to ~24px; cheap on a background thread, but doing
-            // it on the UI thread right as the hero entrance animation starts was a real source of the jank
-            Art.EX.execute(() -> {
+            Art.HERO.execute(() -> {
                 final Bitmap small = soft(bmp);
                 MAIN.post(() -> {
                     if (!key.equals(bg.getTag(R.id.tag_art))) return;
-                    bg.setImageBitmap(small);
-                    bg.setAlpha(0f);
-                    bg.animate().alpha(1f).setDuration(Motion.AMBIENT).start();
+                    android.graphics.drawable.Drawable now = new android.graphics.drawable.BitmapDrawable(c.getResources(), small);
+                    android.graphics.drawable.Drawable before = bg.getDrawable();
+                    if (before instanceof android.graphics.drawable.TransitionDrawable) {
+                        before = ((android.graphics.drawable.TransitionDrawable) before).getDrawable(1);
+                    }
+                    if (before != null && bg.getAlpha() > 0.05f) {
+                        android.graphics.drawable.TransitionDrawable td =
+                                new android.graphics.drawable.TransitionDrawable(new android.graphics.drawable.Drawable[]{before, now});
+                        td.setCrossFadeEnabled(true);
+                        bg.setImageDrawable(td);
+                        td.startTransition((int) Motion.AMBIENT);
+                    } else {
+                        bg.setImageDrawable(now);
+                        bg.setAlpha(0f);
+                        bg.animate().alpha(1f).setDuration(Motion.AMBIENT).start();
+                    }
                 });
             });
         });

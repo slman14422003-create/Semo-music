@@ -192,7 +192,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         Ui.edgeToEdge(this, content);
         Ui.bars(this, true);       // the lock screen is always dark: white clock / battery icons, status bar always shown
 
-        np.artCb = u -> Backdrop.set(this, bg, Store.flag(this, "lock_blur", true) ? u : null);
+        np.artCb = u -> Backdrop.set(this, bg, Store.flag(this, "lock_blur", true) ? u : null, np.artPx());
         setupSwipe(root);
         IntentFilter f = new IntentFilter(Intent.ACTION_USER_PRESENT);
         f.addAction(Intent.ACTION_SCREEN_OFF);

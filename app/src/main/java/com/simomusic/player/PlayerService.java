@@ -212,19 +212,20 @@ public class PlayerService extends MediaSessionService {
 
             @Override
             public void onMediaItemTransition(androidx.media3.common.MediaItem item, int reason) {
-                Resume.save(PlayerService.this, player);
+                Resume.saveSoon(PlayerService.this, player);
             }
 
             @Override
             public void onIsPlayingChanged(boolean playing) {
-                Resume.save(PlayerService.this, player);
+                Resume.saveSoon(PlayerService.this, player);
                 saveTick.removeCallbacksAndMessages(null);
                 if (playing) saveTick.postDelayed(saveRun, 15000);
             }
 
             @Override
             public void onTimelineChanged(androidx.media3.common.Timeline t, int reason) {
-                if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) Resume.save(PlayerService.this, player);
+                Resume.queueChanged();
+                if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) Resume.saveSoon(PlayerService.this, player);
             }
         });
         // home-screen widget: title, artist and play state (only does work when a widget is placed)
@@ -259,7 +260,8 @@ public class PlayerService extends MediaSessionService {
         player.addListener(new Player.Listener() {
             @Override
             public void onMediaItemTransition(androidx.media3.common.MediaItem item, int reason) {
-                extendQueue();
+                h.removeCallbacks(extendTask);
+                h.postDelayed(extendTask, 1500);
             }
         });
         // tapping the media notification opens the app itself with the full player up, so back / close land in the app
@@ -276,6 +278,13 @@ public class PlayerService extends MediaSessionService {
         ContextCompat.registerReceiver(this, screen, f, ContextCompat.RECEIVER_NOT_EXPORTED);
         Store.prefs(this).registerOnSharedPreferenceChangeListener(prefs);
     }
+
+    private final Runnable extendTask = new Runnable() {
+        @Override
+        public void run() {
+            if (player != null && !closing) extendQueue();
+        }
+    };
 
     private void extendQueue() {
         try {
@@ -331,6 +340,7 @@ public class PlayerService extends MediaSessionService {
                     Resume.save(this, player);
                     player.pause();
                 }
+                PlayStats.flush(this);
                 stopSelf();
                 // the app's own controller keeps the service bound; releasing the session lets go of it so the stop completes
                 h.postDelayed(() -> {
@@ -361,6 +371,7 @@ public class PlayerService extends MediaSessionService {
         PlayerWidget.idle(this);
         saveTick.removeCallbacksAndMessages(null);
         if (player != null) Resume.save(this, player);
+        PlayStats.flush(this);
         GroupAudio.detach();
         BtAudio.detach();
         Store.prefs(this).unregisterOnSharedPreferenceChangeListener(prefs);

@@ -23,12 +23,14 @@ public final class Prefetch {
             String key = (cur == null ? "" : cur.mediaId) + "#" + sizes[0];
             if (key.equals(lastKey)) return;
             lastKey = key;
+            boolean big = false;
+            for (int px : sizes) if (px >= 400) big = true;
             int n = m.getMediaItemCount();
             int idx = m.getCurrentMediaItemIndex();
             for (int step = 1; step <= 3; step++) {
                 int i = step == 1 ? m.getNextMediaItemIndex() : step == 2 ? idx + 2 : m.getPreviousMediaItemIndex();
                 if (i < 0 || i >= n || i == idx) continue;
-                if (step == 2 && sizes[0] >= 400) continue;
+                if (step == 2 && big) continue;
                 for (int px : sizes) {
                     if (px > 0) Art.fetch(c, m.getMediaItemAt(i).mediaMetadata.artworkUri, px, b -> {
                     });

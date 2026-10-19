@@ -322,7 +322,7 @@ public final class PlayerPanel extends FrameLayout {
         float sc = 0.95f + 0.05f * f;
         col.setScaleX(sc);
         col.setScaleY(sc);
-        float ps = 0.84f + 0.16f * f;
+        float ps = 0.7f + 0.3f * f;
         setPivotX(getWidth() / 2f);
         setPivotY(getHeight());
         setScaleX(ps);

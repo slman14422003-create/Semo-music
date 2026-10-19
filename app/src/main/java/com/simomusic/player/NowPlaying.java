@@ -47,6 +47,7 @@ public final class NowPlaying implements Player.Listener {
     /** After letting go, ignore the player's old position until it has actually jumped (no flicker back). */
     private long pendingSeek = -1, pendingUntil;
     private String lastArt = "\u0000";
+    private String prefId = "";
     private CharSequence lastTitle, lastArtist, lastUpNext;
     private int lastPlayIcon, lastShuf = -1, lastRepeatMode = -1;
     public ArtCb artCb;
@@ -338,10 +339,15 @@ public final class NowPlaying implements Player.Listener {
             final Uri artUri = au;
             h.postDelayed(() -> {
                 if (!started || !key.equals(lastArt)) return;
-                Prefetch.upcoming(c, Pb.get(), artPx);
                 tintFromArt(artUri, key);
                 if (artCb != null) artCb.onArt(artUri);
             }, 160);
+        }
+        if (it != null && !it.mediaId.equals(prefId)) {
+            prefId = it.mediaId;
+            h.postDelayed(() -> {
+                if (started) Prefetch.upcoming(c, Pb.get(), artPx);
+            }, 300);
         }
         progress();
         schedule();

@@ -78,3 +78,9 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - ArtGlow: the colour is no longer animated per frame (full-screen radial gradient redraw). It fades out (FAST), takes the new colour, fades in (BASE); the view has a hardware layer.
 - Prefetch.upcoming: for large covers (size >= 400 px) only the next and previous songs are prefetched, not the one after next, to cut decode threads and GC pressure while a song starts.
 - Not verified on a device (no compiler in the sandbox).
+
+# Next button cover lag + stronger shrink
+- Cause of the delay on the first Next after opening the full player: the big cover (320 dp) of the next songs was only prefetched when NowPlaying saw a cover change, and NowPlaying is stopped while the player is closed, so the next cover was decoded on demand. MiniPlayer now prefetches the 54 dp and 320 dp covers of the next / previous songs (160 ms after a song change), and NowPlaying prefetches once per song id (300 ms after refresh) even when the cover did not change, e.g. when the player is opened.
+- Prefetch.upcoming skips the song after next whenever a size >= 400 px is requested.
+- PlayerPanel.applyProgress: sheet scale is now 0.70 to 1 (was 0.84 to 1), pivot bottom centre, so the shrink is clearly visible while dragging down.
+- Not verified on a device (no compiler in the sandbox).

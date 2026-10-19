@@ -447,7 +447,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
             h.postDelayed(() -> {
                 if (!started || !key.equals(lastArt)) return;
                 tintFor(artUri, key);
-                Prefetch.upcoming(getContext(), Pb.get(), Ui.dp(getContext(), 54));
+                Prefetch.upcoming(getContext(), Pb.get(), Ui.dp(getContext(), 54), Ui.dp(getContext(), 320));
             }, 160);
         }
     }

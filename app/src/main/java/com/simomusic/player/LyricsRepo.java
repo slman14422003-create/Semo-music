@@ -218,11 +218,13 @@ public final class LyricsRepo {
                         .addQueryParameter("artist_name", main.isEmpty() ? artist : main).build());
             }
             urls.add("S" + search.newBuilder().addQueryParameter("q", (title + " " + main).trim()).build());
+            if (!artist.isEmpty()) urls.add("S" + search.newBuilder().addQueryParameter("track_name", title).build());
             String alt = altTitle(title);
             if (!alt.isEmpty() && !alt.equals(title)) {
                 urls.add("S" + search.newBuilder().addQueryParameter("q", (alt + " " + main).trim()).build());
             }
         }
+        Lyrics plainHit = null;
         for (String u : urls) {
             if (stale.getAsBoolean()) return null;
             if (!tried.add(u)) continue;
@@ -239,13 +241,18 @@ public final class LyricsRepo {
                     o = best(a, q);
                 }
                 Lyrics l = o == null ? null : fromJson(o, "lrclib");
-                if (l != null) return l;
+                if (l != null && !valid(l, q)) l = null;
+                if (l != null) {
+                    if (l.synced || l.instrumental) return l;
+                    if (plainHit == null) plainHit = l;
+                }
             } catch (IOException e) {
                 err = true;
             } catch (JSONException ignored) {
                 net = true;
             }
         }
+        if (plainHit != null) return plainHit;
         if (!artist.isEmpty() && !stale.getAsBoolean()) {
             try {
                 HttpUrl ovh = HttpUrl.parse(OVH_HOST + "/v1");
@@ -256,7 +263,11 @@ public final class LyricsRepo {
                     if (body != null) {
                         String txt = new JSONObject(body).optString("lyrics", "");
                         String[] lines = LrcParser.plain(txt);
-                        if (lines.length > 2) return new Lyrics(false, false, new long[0], lines, "ovh");
+                        if (lines.length > 0 && lines[0].toLowerCase(Locale.ROOT).startsWith("paroles de la chanson")) {
+                            lines = java.util.Arrays.copyOfRange(lines, 1, lines.length);
+                        }
+                        Lyrics ol = new Lyrics(false, false, new long[0], lines, "ovh");
+                        if (lines.length >= 8 && valid(ol, q) && titleSim(q.title, q.title) == 3) return ol;
                     }
                 }
             } catch (IOException e) {
@@ -317,23 +328,90 @@ public final class LyricsRepo {
         return best;
     }
 
+    private static final String[] VERSION_WORDS = {"remix", "live", "acoustic", "instrumental", "karaoke", "cover", "slowed",
+            "sped", "reverb", "nightcore", "8d", "unplugged", "demo", "mashup"};
+
+    private static Set<String> versions(String s) {
+        Set<String> out = new java.util.TreeSet<>();
+        String[] toks = Norm.fold(s).split("[^\\p{L}\\p{N}]+");
+        for (String t : toks) {
+            for (String w : VERSION_WORDS) if (t.equals(w)) out.add(w);
+        }
+        return out;
+    }
+
+    private static String strip(String s) {
+        return s.replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    private static int titleSim(String a, String b) {
+        String fa = strip(Norm.fold(a)), fb = strip(Norm.fold(b));
+        if (fa.isEmpty() || fb.isEmpty()) return 0;
+        if (fa.equals(fb)) return 3;
+        int min = Math.min(fa.length(), fb.length()), max = Math.max(fa.length(), fb.length());
+        if ((fa.contains(fb) || fb.contains(fa)) && min * 10 >= max * 7) return 2;
+        String[] ta = fa.split(" "), tb = fb.split(" ");
+        if (ta.length < 2 || tb.length < 2) return 0;
+        int hit = 0;
+        for (String x : ta) {
+            for (String y : tb) {
+                if (x.equals(y)) {
+                    hit++;
+                    break;
+                }
+            }
+        }
+        return hit * 10 >= Math.max(ta.length, tb.length) * 8 ? 2 : 0;
+    }
+
+    private static boolean hasArabic(String s) {
+        if (s == null) return false;
+        for (int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            if (ch >= '\u0600' && ch <= '\u06FF') return true;
+        }
+        return false;
+    }
+
+    private static boolean valid(Lyrics l, Query q) {
+        if (l.instrumental) return true;
+        if (l.lines.length < 4) return false;
+        if (l.synced && q.durMs > 0 && l.times.length > 0 && l.times[l.times.length - 1] > q.durMs + 15000) return false;
+        if (hasArabic(q.title) || hasArabic(q.artist)) {
+            boolean any = false;
+            for (String x : l.lines) {
+                if (hasArabic(x)) {
+                    any = true;
+                    break;
+                }
+            }
+            if (!any) return false;
+        }
+        return true;
+    }
+
     private static int score(JSONObject o, Query q) {
         boolean has = !o.optString("syncedLyrics", "").isEmpty() || !o.optString("plainLyrics", "").isEmpty() || o.optBoolean("instrumental", false);
         if (!has) return -1;
         String rt = o.optString("trackName", "");
-        int ts = Math.max(sim(q.title, rt), sim(q.rawTitle, rt));
+        int ts = Math.max(titleSim(q.title, rt), titleSim(q.rawTitle, rt));
         if (ts < 2) return -1;
+        if (!versions(q.rawTitle).equals(versions(rt))) return -1;
+        boolean artistKnown = !q.artist.isEmpty();
         int as = 2;
-        if (!q.artist.isEmpty()) {
+        if (artistKnown) {
             as = artistSim(q.artist, o.optString("artistName", ""));
             if (as < 2) return -1;
         }
         double d = o.optDouble("duration", 0);
+        boolean durKnown = q.durMs > 0 && d > 0;
         long dd = 0;
-        if (q.durMs > 0 && d > 0) {
+        if (durKnown) {
             dd = Math.abs(Math.round(d) - Math.round(q.durMs / 1000.0));
-            if (dd > 7) return -1;
+            if (dd > 8) return -1;
+            if (dd > 3 && ts < 3) return -1;
         }
+        if (!artistKnown && (ts < 3 || !durKnown || dd > 3)) return -1;
         return ts * 10 + as * 5 + (dd <= 2 ? 6 : dd <= 4 ? 3 : 0) + (o.optString("syncedLyrics", "").isEmpty() ? 0 : 3);
     }
 
@@ -390,7 +468,7 @@ public final class LyricsRepo {
     }
 
     private static File file(Context c, String key) {
-        return new File(dir(c), "v2_" + Integer.toHexString(key.hashCode()) + "_" + key.length() + ".json");
+        return new File(dir(c), "v3_" + Integer.toHexString(key.hashCode()) + "_" + key.length() + ".json");
     }
 
     private static Lyrics readCache(Context c, String key) {

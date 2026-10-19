@@ -222,7 +222,6 @@ public final class LyricsRepo {
             if (!alt.isEmpty() && !alt.equals(title)) {
                 urls.add("S" + search.newBuilder().addQueryParameter("q", (alt + " " + main).trim()).build());
             }
-            if (!main.isEmpty()) urls.add("S" + search.newBuilder().addQueryParameter("q", title).build());
         }
         for (String u : urls) {
             if (stale.getAsBoolean()) return null;
@@ -234,6 +233,7 @@ public final class LyricsRepo {
                 JSONObject o = null;
                 if (u.charAt(0) == 'G') {
                     o = new JSONObject(body);
+                    if (score(o, q) < 0) o = null;
                 } else {
                     JSONArray a = new JSONArray(body);
                     o = best(a, q);
@@ -300,25 +300,52 @@ public final class LyricsRepo {
         return hit * 10 >= Math.max(ta.length, tb.length) * 6 ? 1 : 0;
     }
 
+    private static List<String> artistParts(String a) {
+        List<String> out = new ArrayList<>();
+        for (String x : a.split("(?i)\\s*(,|&|;|/|\\bfeat\\.?\\s|\\bft\\.?\\s|\\bx\\b|\\band\\b)\\s*")) {
+            x = x.trim();
+            if (!x.isEmpty()) out.add(x);
+        }
+        return out;
+    }
+
+    private static int artistSim(String qa, String ra) {
+        int best = 0;
+        for (String x : artistParts(qa)) {
+            for (String y : artistParts(ra)) best = Math.max(best, sim(x, y));
+        }
+        return best;
+    }
+
+    private static int score(JSONObject o, Query q) {
+        boolean has = !o.optString("syncedLyrics", "").isEmpty() || !o.optString("plainLyrics", "").isEmpty() || o.optBoolean("instrumental", false);
+        if (!has) return -1;
+        String rt = o.optString("trackName", "");
+        int ts = Math.max(sim(q.title, rt), sim(q.rawTitle, rt));
+        if (ts < 2) return -1;
+        int as = 2;
+        if (!q.artist.isEmpty()) {
+            as = artistSim(q.artist, o.optString("artistName", ""));
+            if (as < 2) return -1;
+        }
+        double d = o.optDouble("duration", 0);
+        long dd = 0;
+        if (q.durMs > 0 && d > 0) {
+            dd = Math.abs(Math.round(d) - Math.round(q.durMs / 1000.0));
+            if (dd > 7) return -1;
+        }
+        return ts * 10 + as * 5 + (dd <= 2 ? 6 : dd <= 4 ? 3 : 0) + (o.optString("syncedLyrics", "").isEmpty() ? 0 : 3);
+    }
+
     private static JSONObject best(JSONArray arr, Query q) {
         JSONObject pick = null;
         int top = -1;
         for (int i = 0; i < arr.length(); i++) {
             JSONObject o = arr.optJSONObject(i);
             if (o == null) continue;
-            boolean has = !o.optString("syncedLyrics", "").isEmpty() || !o.optString("plainLyrics", "").isEmpty() || o.optBoolean("instrumental", false);
-            if (!has) continue;
-            int ts = Math.max(sim(q.title, o.optString("trackName", "")), sim(q.rawTitle, o.optString("trackName", "")));
-            if (ts < 1) continue;
-            int as = q.artist.isEmpty() ? 1 : sim(primaryArtist(q.artist), o.optString("artistName", ""));
-            if (as < 1 && ts < 3) continue;
-            double d = o.optDouble("duration", 0);
-            long dd = q.durMs > 0 && d > 0 ? Math.abs(Math.round(d) - Math.round(q.durMs / 1000.0)) : 0;
-            if (dd > 25) continue;
-            int score = ts * 10 + as * 5 + (dd <= 2 ? 6 : dd <= 5 ? 4 : dd <= 10 ? 2 : 0)
-                    + (o.optString("syncedLyrics", "").isEmpty() ? 0 : 3);
-            if (score > top) {
-                top = score;
+            int sc = score(o, q);
+            if (sc > top) {
+                top = sc;
                 pick = o;
             }
         }
@@ -363,7 +390,7 @@ public final class LyricsRepo {
     }
 
     private static File file(Context c, String key) {
-        return new File(dir(c), Integer.toHexString(key.hashCode()) + "_" + key.length() + ".json");
+        return new File(dir(c), "v2_" + Integer.toHexString(key.hashCode()) + "_" + key.length() + ".json");
     }
 
     private static Lyrics readCache(Context c, String key) {

@@ -13,7 +13,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.ListUpdateCallback;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.ArrayList;
@@ -70,8 +72,12 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
     private boolean hadHeader;
 
     /** Skips the whole re-bind when nothing actually changed (onResume refreshes a lot). */
-    @SuppressLint("NotifyDataSetChanged")
     public void setData(List<Track> list) {
+        setData(list, false);
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setData(List<Track> list, boolean reshuffled) {
         boolean hdr = header != null;
         boolean same = list.size() == data.size() && hdr == hadHeader;
         for (int i = 0; same && i < list.size(); i++) {
@@ -80,10 +86,70 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         }
         if (same) return;
         if (hdr == hadHeader && list.size() < data.size() && removeOnly(list)) return;
+        if (hdr == hadHeader && !reshuffled && diff(list)) return;
         hadHeader = hdr;
         data.clear();
         data.addAll(list);
         notifyDataSetChanged();
+    }
+
+    private boolean diff(final List<Track> list) {
+        int a = data.size(), b = list.size();
+        if (a == 0 || b == 0 || a > 2500 || b > 2500) return false;
+        Set<Long> ids = new HashSet<>(a * 2);
+        for (Track t : data) ids.add(t.id);
+        int common = 0;
+        for (Track t : list) if (ids.contains(t.id)) common++;
+        if (common * 10 < Math.max(a, b) * 6) return false;
+        final List<Track> old = new ArrayList<>(data);
+        DiffUtil.DiffResult r = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return old.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return list.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int o, int n) {
+                return old.get(o).id == list.get(n).id;
+            }
+
+            @Override
+            public boolean areContentsTheSame(int o, int n) {
+                Track x = old.get(o), y = list.get(n);
+                return x == y || (x.title.equals(y.title) && x.artist.equals(y.artist));
+            }
+        }, true);
+        data.clear();
+        data.addAll(list);
+        final int o = off();
+        r.dispatchUpdatesTo(new ListUpdateCallback() {
+            @Override
+            public void onInserted(int position, int count) {
+                notifyItemRangeInserted(position + o, count);
+            }
+
+            @Override
+            public void onRemoved(int position, int count) {
+                notifyItemRangeRemoved(position + o, count);
+            }
+
+            @Override
+            public void onMoved(int from, int to) {
+                notifyItemMoved(from + o, to + o);
+            }
+
+            @Override
+            public void onChanged(int position, int count, Object payload) {
+                notifyItemRangeChanged(position + o, count, payload);
+            }
+        });
+        notifyItemRangeChanged(o, data.size(), "shape");
+        return true;
     }
 
     /** When the new list is the old one minus some songs (a delete), the missing rows slide out one by one. */

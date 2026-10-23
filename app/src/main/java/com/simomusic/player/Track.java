@@ -6,7 +6,7 @@ import android.net.Uri;
 public final class Track {
     public final long id;
     public final Uri uri;
-    public final String title, artist, album, ext, key, folder;
+    public final String title, artist, album, ext, key, folder, sortTitle, sortArtist, sortAlbum;
     public final long duration, added;
 
     public Track(long id, Uri uri, String title, String artist, String album, String ext, long duration, long added, String folder) {
@@ -20,5 +20,8 @@ public final class Track {
         this.added = added;
         this.folder = folder == null ? "" : folder;
         this.key = Norm.fold(title + " " + artist + " " + album);
+        this.sortTitle = Norm.sortKey(title);
+        this.sortArtist = Norm.sortKey(artist);
+        this.sortAlbum = Norm.sortKey(album);
     }
 }

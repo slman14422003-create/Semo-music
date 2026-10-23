@@ -483,8 +483,6 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
 
     // ------------------------------------------------------------------ AI lyrics (no lyrics found online)
 
-    private static final String KEY_PREF = "groq_key";
-
     private void startGenerate() {
         if (aiBusy || audioUri == null) return;
         CharSequence[] items = {getString(R.string.ai_gen_online), getString(R.string.ai_gen_phone)};
@@ -499,7 +497,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
     }
 
     private void generateOnline() {
-        String key = Store.prefs(this).getString(KEY_PREF, "");
+        String key = Store.groqKey(this);
         if (key != null && !key.trim().isEmpty()) {
             runGenerate(key.trim());
             return;
@@ -520,7 +518,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                 .setPositiveButton(android.R.string.ok, (dlg, w) -> {
                     String k = et.getText().toString().trim();
                     if (k.isEmpty()) return;
-                    Store.prefs(this).edit().putString(KEY_PREF, k).apply();
+                    Store.setGroqKey(this, k);
                     runGenerate(k);
                 })
                 .show();

@@ -423,4 +423,14 @@
     <string name="ai_stage_decode">Reading the song…</string>
     <string name="ai_stage_online">Uploading and transcribing online…</string>
     <string name="ai_stage_phone">Transcribing on this phone (a few minutes)…</string>
+    <string name="crossfade_title">Fade between songs</string>
+    <string name="crossfade_sub">The end of a song fades out and the next one fades in</string>
+    <string name="crossfade_off">Off</string>
+    <string name="crossfade_secs">%d s</string>
+    <string name="sleep_shake_title">Shake to extend the sleep timer</string>
+    <string name="sleep_shake_sub">In the last minute, shake the phone to add 10 minutes</string>
+    <string name="sleep_extended">Sleep timer extended by 10 minutes</string>
+    <string name="unknown_album">Unknown album</string>
+    <string name="seek_bar">Playback position</string>
+    <string name="cover_art">Album cover, swipe to change the song</string>
 </resources>

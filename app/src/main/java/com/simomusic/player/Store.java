@@ -9,7 +9,11 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -25,6 +29,30 @@ public final class Store {
 
     public static SharedPreferences prefs(Context c) {
         return c.getApplicationContext().getSharedPreferences("simomusic", Context.MODE_PRIVATE);
+    }
+
+    public static SharedPreferences secrets(Context c) {
+        return c.getApplicationContext().getSharedPreferences("simomusic_secret", Context.MODE_PRIVATE);
+    }
+
+    public static String groqKey(Context c) {
+        SharedPreferences s = secrets(c);
+        String k = s.getString("groq_key", "");
+        if (k == null || k.isEmpty()) {
+            SharedPreferences m = prefs(c);
+            String old = m.getString("groq_key", "");
+            if (old != null && !old.isEmpty()) {
+                s.edit().putString("groq_key", old).apply();
+                m.edit().remove("groq_key").apply();
+                k = old;
+            }
+        }
+        return k == null ? "" : k;
+    }
+
+    public static void setGroqKey(Context c, String k) {
+        secrets(c).edit().putString("groq_key", k).apply();
+        prefs(c).edit().remove("groq_key").apply();
     }
 
     public static boolean flag(Context c, String k, boolean def) {
@@ -89,6 +117,14 @@ public final class Store {
         return (sort(c) & 16) != 0;
     }
 
+    public static int crossfade(Context c) {
+        return prefs(c).getInt("crossfade", 0);
+    }
+
+    public static void setCrossfade(Context c, int secs) {
+        prefs(c).edit().putInt("crossfade", secs).apply();
+    }
+
     public static boolean smartFilter(Context c) {
         return flag(c, "smart_filter", true);
     }
@@ -108,10 +144,15 @@ public final class Store {
 
     public static final class Playlist {
         public String id, name;
-        public final List<Long> ids = new ArrayList<>();
+        public final List<Long> ids = new CopyOnWriteArrayList<>();
     }
 
     private static List<Playlist> cache;
+    private static final Map<Long, String> keys = new HashMap<>();
+
+    static String stableKey(Track t) {
+        return Norm.fold(t.title) + "|" + Norm.fold(t.artist) + "|" + (t.duration / 1000);
+    }
 
     public static synchronized List<Playlist> playlists(Context c) {
         if (cache == null) load(c);
@@ -119,20 +160,36 @@ public final class Store {
     }
 
     private static void load(Context c) {
-        cache = new ArrayList<>();
+        cache = new CopyOnWriteArrayList<>();
+        keys.clear();
         String s = prefs(c).getString("playlists", null);
+        JSONArray arr;
         try {
-            JSONArray a = s == null ? new JSONArray() : new JSONArray(s);
-            for (int i = 0; i < a.length(); i++) {
-                JSONObject o = a.getJSONObject(i);
+            arr = s == null ? new JSONArray() : new JSONArray(s);
+        } catch (JSONException e) {
+            prefs(c).edit().putString("playlists_corrupt", s).apply();
+            arr = new JSONArray();
+        }
+        for (int i = 0; i < arr.length(); i++) {
+            try {
+                JSONObject o = arr.getJSONObject(i);
                 Playlist p = new Playlist();
                 p.id = o.getString("id");
                 p.name = o.getString("name");
                 JSONArray ids = o.getJSONArray("ids");
                 for (int j = 0; j < ids.length(); j++) p.ids.add(ids.getLong(j));
                 cache.add(p);
+            } catch (JSONException ignored) {
             }
-        } catch (JSONException ignored) {
+        }
+        try {
+            JSONObject km = new JSONObject(prefs(c).getString("idkeys", "{}"));
+            Iterator<String> it = km.keys();
+            while (it.hasNext()) {
+                String k = it.next();
+                keys.put(Long.parseLong(k), km.getString(k));
+            }
+        } catch (JSONException | NumberFormatException ignored) {
         }
         boolean hasFav = false, hasAi = false;
         for (Playlist p : cache) {
@@ -163,7 +220,23 @@ public final class Store {
             q.ids.addAll(p.ids);
             snap.add(q);
         }
+        Map<Long, String> nk = new HashMap<>();
+        for (Playlist p : cache) {
+            for (long id : p.ids) {
+                Track t = Library.byId.get(id);
+                String k = t != null ? stableKey(t) : keys.get(id);
+                if (k != null) nk.put(id, k);
+            }
+        }
+        keys.clear();
+        keys.putAll(nk);
+        final Map<Long, String> keySnap = nk;
         Bg.io("save playlists", () -> {
+            JSONObject km = new JSONObject();
+            try {
+                for (Map.Entry<Long, String> e : keySnap.entrySet()) km.put(String.valueOf(e.getKey()), e.getValue());
+            } catch (JSONException ignored) {
+            }
             JSONArray a = new JSONArray();
             try {
                 for (Playlist p : snap) {
@@ -177,8 +250,34 @@ public final class Store {
                 }
             } catch (JSONException ignored) {
             }
-            prefs(app).edit().putString("playlists", a.toString()).apply();
+            prefs(app).edit().putString("playlists", a.toString()).putString("idkeys", km.toString()).apply();
         });
+    }
+
+    public static synchronized void remap(Context c) {
+        Map<String, Long> byKey = null;
+        boolean changed = keys.isEmpty() && !Library.byId.isEmpty();
+        for (Playlist p : playlists(c)) {
+            for (int i = 0; i < p.ids.size(); i++) {
+                long id = p.ids.get(i);
+                if (Library.byId.containsKey(id)) continue;
+                String k = keys.get(id);
+                if (k == null) continue;
+                if (byKey == null) {
+                    byKey = new HashMap<>();
+                    for (Track t : Library.tracks) {
+                        String tk = stableKey(t);
+                        if (!byKey.containsKey(tk)) byKey.put(tk, t.id);
+                    }
+                }
+                Long nid = byKey.get(k);
+                if (nid != null && !p.ids.contains(nid)) {
+                    p.ids.set(i, nid);
+                    changed = true;
+                }
+            }
+        }
+        if (changed) save(c);
     }
 
     public static synchronized Playlist playlist(Context c, String id) {
@@ -263,15 +362,12 @@ public final class Store {
     public static synchronized int addAll(Context c, String pid, Collection<Long> ids) {
         Playlist p = playlist(c, pid);
         if (p == null) return 0;
-        int n = 0;
-        for (long id : ids) {
-            if (!p.ids.contains(id)) {
-                p.ids.add(id);
-                n++;
-            }
-        }
+        Set<Long> have = new HashSet<>(p.ids);
+        List<Long> add = new ArrayList<>();
+        for (long id : ids) if (have.add(id)) add.add(id);
+        p.ids.addAll(add);
         save(c);
-        return n;
+        return add.size();
     }
 
     public static synchronized void setOrder(Context c, String pid, List<Long> ids) {

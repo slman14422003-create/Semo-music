@@ -94,7 +94,7 @@ public final class Perms {
     }
 
     public static boolean anyMissing(Context c) {
-        return !hasAudio(c) || !hasNotif(c) || !hasFsi(c) || !hasLockChannel(c) || !hasOverlay(c) || !hasBt(c);
+        return !hasAudio(c) || !hasNotif(c) || !hasBt(c);
     }
 
     /** Runtime permissions asked together on first launch. */

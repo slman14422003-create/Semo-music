@@ -18,7 +18,7 @@ public final class Menus {
 
     public static void song(final Context c, final Track t, final Runnable changed) {
         String sub = t.artist == null || t.artist.isEmpty() ? t.album : t.artist;
-        if (sub == null || sub.isEmpty()) sub = t.ext.toUpperCase();
+        if (sub == null || sub.isEmpty()) sub = t.ext.toUpperCase(java.util.Locale.ROOT);
         Sheet.show(c, t.title, sub, () -> {
             List<Sheet.Item> l = new ArrayList<>();
             l.add(Sheet.item(R.drawable.ic_play, c.getString(R.string.play_next), false, false, () -> {
@@ -119,7 +119,7 @@ public final class Menus {
                 if (changed != null) changed.run();
                 Ui.toast(c, c.getString(R.string.sleep_set, mins[i]));
             }));
-            if (Pb.sleepAt > 0) {
+            if (Pb.sleepAt() > 0) {
                 l.add(Sheet.divider());
                 l.add(Sheet.danger(R.drawable.ic_close, c.getString(R.string.sleep_off), () -> {
                     Pb.sleep(0);
@@ -142,8 +142,9 @@ public final class Menus {
             float sp = m == null ? 1f : m.getPlaybackParameters().speed;
             l.add(Sheet.item(R.drawable.ic_play, c.getString(R.string.playback_speed) + " · " + speedLabel(sp), sp != 1f, false,
                     () -> speed(c)));
-            boolean on = Pb.sleepAt > 0;
-            long left = on ? Math.max(1, (Pb.sleepAt - SystemClock.elapsedRealtime() + 59999) / 60000) : 0;
+            long at = Pb.sleepAt();
+            boolean on = at > 0;
+            long left = on ? Math.max(1, (at - SystemClock.elapsedRealtime() + 59999) / 60000) : 0;
             l.add(Sheet.item(R.drawable.ic_timer, on ? c.getString(R.string.sleep_left, (int) left) : c.getString(R.string.sleep_timer),
                     on, false, () -> sleep(c, changed)));
             l.add(Sheet.item(R.drawable.ic_lock, c.getString(R.string.lock_preview), false, false, () -> {

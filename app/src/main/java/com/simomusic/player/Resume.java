@@ -21,6 +21,7 @@ public final class Resume {
         idsDirty = true;
     }
     private static final int MAX = 1000;
+    private static int idsFrom;
 
     private static String idsCache = "";
     private static boolean idsDirty = true;
@@ -52,10 +53,13 @@ public final class Resume {
         }
         int n = p.getMediaItemCount();
         if (n == 0) return;
-        if (idsDirty) {
+        int at = Math.max(0, p.getCurrentMediaItemIndex());
+        if (idsDirty || at < idsFrom || at >= idsFrom + MAX) {
+            int from = Math.max(0, Math.min(at - 200, n - MAX));
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < Math.min(n, MAX); i++) sb.append(p.getMediaItemAt(i).mediaId).append(',');
+            for (int i = from; i < Math.min(n, from + MAX); i++) sb.append(p.getMediaItemAt(i).mediaId).append(',');
             idsCache = sb.toString();
+            idsFrom = from;
             idsDirty = false;
         }
         androidx.media3.common.MediaItem cur = p.getCurrentMediaItem();
@@ -85,19 +89,23 @@ public final class Resume {
             String cur = sp.getString("rs_cur", "");
             final List<Track> list = new ArrayList<>();
             int at = 0;
+            boolean found = false;
             for (String s : ids.split(",")) {
                 if (s.isEmpty()) continue;
                 try {
                     Track t = Library.byId.get(Long.parseLong(s));
                     if (t == null) continue;
-                    if (s.equals(cur)) at = list.size();
+                    if (s.equals(cur)) {
+                        at = list.size();
+                        found = true;
+                    }
                     list.add(t);
                 } catch (NumberFormatException ignored) {
                 }
             }
             if (list.isEmpty()) return;
             final int idx = at;
-            final long pos = sp.getLong("rs_pos", 0);
+            final long pos = found || cur.isEmpty() ? sp.getLong("rs_pos", 0) : 0;
             final boolean shuffle = sp.getBoolean("rs_shuffle", false);
             final int repeat = sp.getInt("rs_repeat", 0);
             Bg.main(() -> Pb.restore(app, list, idx, pos, shuffle, repeat));

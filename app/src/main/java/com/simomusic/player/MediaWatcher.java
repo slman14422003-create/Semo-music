@@ -28,7 +28,7 @@ public final class MediaWatcher {
     }
 
     private static final long DELAY_MS = 800;
-    private static final long TICK_MS = 15000;
+    private static final long TICK_MS = 60000;
     private static final long WALK_BUDGET_MS = 4000;
     private static final int MAX_DEPTH = 12;
     private static final int MAX_DIRS = 6000;
@@ -48,7 +48,9 @@ public final class MediaWatcher {
         final Runnable tick = new Runnable() {
             @Override
             public void run() {
-                if (App.visibleCount() > 0 && Perms.hasAudio(app)) sweep(app);
+                androidx.media3.session.MediaController m = Pb.get();
+                boolean playing = m != null && m.isPlaying();
+                if (App.visibleCount() > 0 && !playing && Perms.hasAudio(app)) sweep(app);
                 h.postDelayed(this, TICK_MS);
             }
         };

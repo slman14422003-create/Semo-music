@@ -135,9 +135,16 @@ public class OpenActivity extends Activity {
         File dir = new File(getCacheDir(), "open");
         dir.mkdirs();
         File[] old = dir.listFiles();
-        if (old != null && old.length > 4) {           // keep only the newest few
+        if (old != null && old.length > 12) {
             java.util.Arrays.sort(old, (x, y) -> Long.compare(x.lastModified(), y.lastModified()));
-            for (int i = 0; i < old.length - 4; i++) old[i].delete();
+            long dayAgo = System.currentTimeMillis() - 24L * 3600 * 1000;
+            for (int i = 0; i < old.length - 12; i++) if (old[i].lastModified() < dayAgo) old[i].delete();
+        }
+        if ("file".equals(u.getScheme())) {
+            String cp = new File(String.valueOf(u.getPath())).getCanonicalPath();
+            if (cp.startsWith("/data/") || cp.startsWith("/proc/") || cp.startsWith(getApplicationInfo().dataDir)) {
+                throw new SecurityException("blocked path");
+            }
         }
         String n = name(u).replaceAll("[^\\p{L}\\p{N}._ -]", "_");
         if (!n.contains(".")) n += ".mp3";
@@ -147,7 +154,15 @@ public class OpenActivity extends Activity {
             if (in == null) throw new java.io.FileNotFoundException(String.valueOf(u));
             byte[] buf = new byte[64 * 1024];
             int k;
-            while ((k = in.read(buf)) > 0) out.write(buf, 0, k);
+            long total = 0;
+            while ((k = in.read(buf)) > 0) {
+                total += k;
+                if (total > 400L * 1024 * 1024) {
+                    f.delete();
+                    throw new java.io.IOException("file too large");
+                }
+                out.write(buf, 0, k);
+            }
         }
         return f;
     }
@@ -173,12 +188,9 @@ public class OpenActivity extends Activity {
     private void playSearch(final String q) {
         withLibrary(() -> {
             List<Track> all = Library.sorted(Store.sort(this)), hit = new ArrayList<>();
-            String k = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
-            if (!k.isEmpty()) {
-                for (Track t : all) {
-                    if (t.title.toLowerCase(Locale.ROOT).contains(k) || (t.artist != null && t.artist.toLowerCase(Locale.ROOT).contains(k))
-                            || (t.album != null && t.album.toLowerCase(Locale.ROOT).contains(k))) hit.add(t);
-                }
+            String[] tk = Norm.tokens(q == null ? "" : q);
+            if (tk.length > 0) {
+                for (Track t : all) if (Norm.matches(t.key, tk)) hit.add(t);
             }
             boolean shuffle = hit.isEmpty();
             List<Track> play = hit.isEmpty() ? all : hit;

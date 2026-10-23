@@ -37,7 +37,7 @@ public final class Updater {
     public static final int E_NET = 1, E_NONE = 2, E_LIMIT = 3, E_FILE = 4;
 
     public static final class Info {
-        public String tag = "", name = "", notes = "", url = "";
+        public String tag = "", name = "", notes = "", url = "", digest = "";
         public long size;
         public boolean newer;
     }
@@ -138,6 +138,7 @@ public final class Updater {
                             if (a.optString("name", "").toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) {
                                 i.url = a.optString("browser_download_url", "");
                                 i.size = a.optLong("size", 0);
+                                i.digest = a.optString("digest", "");
                                 break;
                             }
                         }
@@ -181,6 +182,7 @@ public final class Updater {
                 c = open(info.url);
                 if (c.getResponseCode() != 200) throw new java.io.IOException("HTTP " + c.getResponseCode());
                 long total = c.getContentLengthLong() > 0 ? c.getContentLengthLong() : info.size;
+                if (total > 400L * 1024 * 1024) throw new java.io.IOException("too large");
                 long done = 0;
                 int last = -1;
                 try (InputStream in = c.getInputStream(); FileOutputStream fo = new FileOutputStream(out)) {
@@ -200,7 +202,7 @@ public final class Updater {
                     }
                 }
                 if (total > 0 && done != total) throw new java.io.IOException("incomplete download");
-                if (!isThisApp(app, out)) err = E_FILE;
+                if (!isThisApp(app, out) || !digestOk(out, info.digest)) err = E_FILE;
             } catch (Exception e) {
                 if (!cancel.get()) CrashGuard.nonFatal("update download", e);
                 err = cancel.get() ? -1 : E_NET;
@@ -215,12 +217,32 @@ public final class Updater {
         }, "update-download").start();
     }
 
-    /** The file must be an apk of this very app, otherwise it is never offered to the installer. */
     private static boolean isThisApp(Context c, File f) {
         try {
-            PackageInfo p = c.getPackageManager().getPackageArchiveInfo(f.getAbsolutePath(), 0);
-            return p != null && c.getPackageName().equals(p.packageName);
-        } catch (RuntimeException e) {
+            android.content.pm.PackageManager pm = c.getPackageManager();
+            PackageInfo p = pm.getPackageArchiveInfo(f.getAbsolutePath(), 0);
+            if (p == null || !c.getPackageName().equals(p.packageName)) return false;
+            PackageInfo cur = pm.getPackageInfo(c.getPackageName(), 0);
+            return androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(p)
+                    >= androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(cur);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static boolean digestOk(File f, String digest) {
+        if (digest == null || !digest.startsWith("sha256:")) return true;
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            try (InputStream in = new java.io.FileInputStream(f)) {
+                byte[] b = new byte[64 * 1024];
+                int k;
+                while ((k = in.read(b)) > 0) md.update(b, 0, k);
+            }
+            StringBuilder sb = new StringBuilder();
+            for (byte x : md.digest()) sb.append(String.format(java.util.Locale.ROOT, "%02x", x));
+            return sb.toString().equalsIgnoreCase(digest.substring(7).trim());
+        } catch (Exception e) {
             return false;
         }
     }

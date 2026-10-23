@@ -447,4 +447,14 @@
     <string name="ai_stage_decode">جارٍ قراءة الأغنية…</string>
     <string name="ai_stage_online">جارٍ الرفع والتحويل إلى نص أونلاين…</string>
     <string name="ai_stage_phone">جارٍ التحويل إلى نص على الهاتف (عدة دقائق)…</string>
+    <string name="crossfade_title">انتقال تدريجي بين الأغاني</string>
+    <string name="crossfade_sub">تخفت نهاية الأغنية وتظهر التالية تدريجيًا</string>
+    <string name="crossfade_off">إيقاف</string>
+    <string name="crossfade_secs">%d ث</string>
+    <string name="sleep_shake_title">هزّ الهاتف لتمديد مؤقت النوم</string>
+    <string name="sleep_shake_sub">في آخر دقيقة، هزّ الهاتف لإضافة 10 دقائق</string>
+    <string name="sleep_extended">تم تمديد مؤقت النوم 10 دقائق</string>
+    <string name="unknown_album">ألبوم غير معروف</string>
+    <string name="seek_bar">موضع التشغيل</string>
+    <string name="cover_art">غلاف الألبوم، اسحب لتغيير الأغنية</string>
 </resources>

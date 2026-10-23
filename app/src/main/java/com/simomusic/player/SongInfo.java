@@ -76,7 +76,7 @@ public final class SongInfo {
         };
         final LinearLayout body = new LinearLayout(c);
         body.setOrientation(LinearLayout.VERTICAL);
-        body.setPadding(Ui.dp(c, 14), 0, Ui.dp(c, 14), 0);
+        body.setPadding(Ui.dp(c, 8), 0, Ui.dp(c, 8), 0);
         sv.addView(body);
         root.addView(sv);
         TextView loading = Ui.text(c, c.getString(R.string.bt_loading), 15, R.color.text_secondary);

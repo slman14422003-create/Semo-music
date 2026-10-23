@@ -67,6 +67,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private final android.os.Handler searchHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable searchRefresh = this::refresh;
     private List<Track> shown = new ArrayList<>();
+    private FastScroll fast;
+    private int listMode = -1;
 
     private final ActivityResultLauncher<String[]> askPerms =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), r -> rescan());
@@ -266,6 +268,22 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             ((androidx.recyclerview.widget.SimpleItemAnimator) ia).setSupportsChangeAnimations(false);
         }
         ListTuning.apply(rv);
+        rv.addItemDecoration(new SectionDecoration(this, new SectionDecoration.Source() {
+            @Override
+            public List<Track> tracks() {
+                return songs.data;
+            }
+
+            @Override
+            public int mode() {
+                return tab == 0 && rv.getAdapter() == songs ? listMode : -1;
+            }
+
+            @Override
+            public int offset() {
+                return songs.header == null ? 0 : 1;
+            }
+        }));
         // swipe a song to either side: play it next
         new androidx.recyclerview.widget.ItemTouchHelper(new SwipeToQueue(this, songs)).attachToRecyclerView(rv);
         srl = new androidx.swiperefreshlayout.widget.SwipeRefreshLayout(this);
@@ -277,6 +295,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             refresh();
         }));
         body.addView(srl, new FrameLayout.LayoutParams(-1, -1));
+        fast = new FastScroll(this, rv);
+        body.addView(fast, new FrameLayout.LayoutParams(-1, -1));
         skeleton = Ui.skeleton(this);
         skeleton.setVisibility(View.GONE);
         body.addView(skeleton, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
@@ -402,6 +422,12 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         refresh();
     }
 
+    private String scrollLabel(int adapterPos) {
+        if (shown.isEmpty()) return "";
+        int i = Math.max(0, Math.min(shown.size() - 1, adapterPos - (songs.header == null ? 0 : 1)));
+        return SectionDecoration.scrollLabel(shown.get(i), listMode, i);
+    }
+
     private void playAll(boolean shuffle) {
         if (shown.isEmpty()) return;
         if (shuffle && Store.aiEnabled(this)) {
@@ -454,8 +480,13 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private void applyList(List<Track> all) {
         int total = Library.tracks.size();
         shown = all;
+        int mode = Store.sortMode(this);
+        if (mode != listMode) {
+            listMode = mode;
+            rv.invalidateItemDecorations();
+        }
         songs.header = all.isEmpty() ? null : actions;
-        songs.setData(all);
+        songs.setData(all, animateNext);
         songs.setCurrent(Pb.currentId());
         if (songs.select) syncSelection(all);
 
@@ -499,6 +530,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         }
         banner.setVisibility(Perms.anyMissing(this) ? View.VISIBLE : View.GONE);
         srl.setEnabled(tab == 0 && audio);
+        fast.setup(this::scrollLabel, tab == 0 && all.size() > 60);
     }
 
     @Override

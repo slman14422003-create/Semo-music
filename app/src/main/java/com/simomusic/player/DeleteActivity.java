@@ -29,6 +29,7 @@ public class DeleteActivity extends Activity {
     private final List<Uri> uris = new ArrayList<>();
     private final List<Long> ids = new ArrayList<>();
     private final Set<Long> deleted = new HashSet<>();
+    private boolean seen;
     private int next;       // Android 10 / older: index of the file being handled
 
     public static void start(Context c, Track t) {
@@ -60,6 +61,9 @@ public class DeleteActivity extends Activity {
             for (long id : idArr) ids.add(id);
             uris.addAll(us);
             if (b == null) begin();
+            else new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                if (!seen && !isFinishing()) finish();
+            }, 1500);
         } catch (Throwable t) {
             CrashGuard.nonFatal("delete", t);
             fail();
@@ -114,6 +118,7 @@ public class DeleteActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        seen = true;
         if (req != REQ_SYSTEM) return;
         if (Build.VERSION.SDK_INT >= 30) {
             if (res == RESULT_OK) {
@@ -134,6 +139,7 @@ public class DeleteActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int req, String[] p, int[] r) {
         super.onRequestPermissionsResult(req, p, r);
+        seen = true;
         if (req == REQ_PERM && r.length > 0 && r[0] == PackageManager.PERMISSION_GRANTED) {
             deleteOld();
         } else {

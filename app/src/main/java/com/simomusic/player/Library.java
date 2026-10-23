@@ -28,7 +28,7 @@ public final class Library {
     }
 
     public static volatile List<Track> tracks = new ArrayList<>();
-    public static final Map<Long, Track> byId = new ConcurrentHashMap<>();
+    public static volatile Map<Long, Track> byId = new ConcurrentHashMap<>();
     public static volatile boolean loaded;
 
     /** Every folder that holds at least one recognised audio file, regardless of the hide-folder setting in Settings. */
@@ -160,7 +160,7 @@ public final class Library {
                     while (q.moveToNext()) {
                         String name = q.getString(6) == null ? "" : q.getString(6);
                         int dot = name.lastIndexOf('.');
-                        String ext = dot >= 0 ? name.substring(dot + 1).toLowerCase() : "";
+                        String ext = dot >= 0 ? name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT) : "";
                         long dur = q.getLong(4);
                         if (!allowed.contains(ext)) continue;
                         if (dur <= 0) {
@@ -210,14 +210,20 @@ public final class Library {
                 sortedCache = null;
                 sortedMode = -1;
             }
-            byId.clear();
-            for (Track t : out) byId.put(t.id, t);
+            Map<Long, Track> nm = new ConcurrentHashMap<>(Math.max(16, out.size() * 2));
+            for (Track t : out) nm.put(t.id, t);
+            byId = nm;
         }
         lastGen = gen;
         loaded = true;
         if (changed) {
             sorted(Store.sort(c)); // pre-warm on this background thread so the first screen draw is instant
             if (access && ok && !gone.isEmpty()) dropDeletedFromQueue(c, gone);
+            try {
+                Store.remap(c);
+            } catch (RuntimeException e) {
+                CrashGuard.nonFatal("playlist remap", e);
+            }
             fire();
         }
     }
@@ -294,14 +300,14 @@ public final class Library {
         boolean reverse = (encoded & 16) != 0;
         final Collator col = Collator.getInstance();
         col.setStrength(Collator.PRIMARY);
-        final Comparator<Track> byTitle = (a, b) -> col.compare(Norm.sortKey(a.title), Norm.sortKey(b.title));
+        final Comparator<Track> byTitle = (a, b) -> col.compare(a.sortTitle, b.sortTitle);
         Comparator<Track> cmp;
         switch (mode) {
             case 1:
                 cmp = (a, b) -> {
                     int e = blank(a.artist, b.artist);
                     if (e != 0) return e;
-                    int r = col.compare(Norm.sortKey(a.artist), Norm.sortKey(b.artist));
+                    int r = col.compare(a.sortArtist, b.sortArtist);
                     return r != 0 ? r : byTitle.compare(a, b);
                 };
                 break;
@@ -321,7 +327,7 @@ public final class Library {
                 cmp = (a, b) -> {
                     int e = blank(a.album, b.album);
                     if (e != 0) return e;
-                    int r = col.compare(Norm.sortKey(a.album), Norm.sortKey(b.album));
+                    int r = col.compare(a.sortAlbum, b.sortAlbum);
                     return r != 0 ? r : byTitle.compare(a, b);
                 };
                 break;

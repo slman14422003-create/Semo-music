@@ -115,3 +115,39 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - LrcParser: multi-timestamp lines, offset tag, enhanced word tags stripped, empty lines become a note symbol.
 - Title / artist cleaning (brackets, feat., track numbers, "Artist - Title" in the title) happens in LyricsRepo.Query.of.
 - Plain-only lyrics are turned into estimated sync (LyricsRepo.estimate: lines weighted by length over the song duration). Each tap on the line being sung adds or replaces an anchor (line index, position); build() interpolates between anchors by line weight, learns the singing rate from the anchors and slows the tail estimate when the same line is tapped again later. Anchors are stored in the cache json (anch, mul); long-press seeks to that line.
+
+# Audit fixes applied 2026-10-23 (not compiled, not run on a device)
+- Groq key moved to its own prefs file "simomusic_secret" (Store.groqKey / setGroqKey, old value migrated and removed). backup_rules.xml and data_extraction_rules.xml exclude it, simomusic_stats and the whisper folder; manifest fullBackupContent points to @xml/backup_rules.
+- Stable playlist keys: Store keeps id -> "title|artist|seconds" in prefs "idkeys" (rebuilt on every save) and Store.remap(c), called at the end of Library.read, re-points playlist ids that no longer exist to the song with the same key.
+- Library.byId is now a volatile map that is built aside and swapped (no empty window). Track has sortTitle / sortArtist / sortAlbum precomputed and the comparators use them. Extension lower-casing uses Locale.ROOT.
+- Store: playlists and their ids are CopyOnWriteArrayList (safe to iterate while changed), load parses item by item and keeps the raw text in "playlists_corrupt" if the array itself is broken, addAll uses a HashSet.
+- Sleep timer runs in PlayerService (pref "sleep_wall" = wall clock end time, 0 = off; armSleep, sleepRun, sleepFade with 15 s fade). Pb.sleep only writes the pref and keeps its own UI task.
+- MediaWatcher sweep: every 60 s (was 15), skipped while something is playing.
+- Resume saves a 1000-id window around the current song and only restores the saved position when the current song was found.
+- DeleteActivity finishes itself after 1.5 s when recreated without a pending result.
+- OpenActivity: file: paths under /data/ and /proc/ or the app's own dir are refused, copies capped at 400 MB, cache keeps 12 files and only deletes the ones older than a day; voice search uses Norm.
+- Updater: refuses an apk with a lower version code, verifies the GitHub asset "sha256:" digest when present, caps size at 400 MB.
+- WhisperEngine.download resumes the .part file with a Range request and keeps it when cancelled or interrupted.
+- PickSongsActivity search uses Norm tokens; Menus / Oem upper/lower-case with Locale.ROOT; Perms.anyMissing only counts audio, notifications and Bluetooth (lock-screen specials stay in Settings).
+
+# Still open after the audit
+- Model SHA-256 pin for Whisper (needs the real hash) and a cleartext policy (usesCleartextTraffic stays true because http links opened from other apps are supported).
+- DiffUtil in TrackAdapter (rows keep their bound position for click callbacks, needs care), accessibility labels on the remaining custom views, performClick in touch listeners.
+- All feature and design ideas listed in the audit section above.
+- First thing to do next: run the GitHub Actions build and fix any compile error reported.
+
+# Features + design pass (not compiled, not run on a device)
+- Android Auto / MediaLibraryService: not wanted, not added.
+- FastScroll.java: thumb on the end edge of the song list (appears while scrolling, grab it to drag), bubble shows the letter of the current sort key (title / artist / album) or the row number for other sorts; only for lists above 60 songs on the Songs tab. Touch only starts on the thumb so the row menu buttons are never hijacked.
+- SectionDecoration.java: group headers inside the song list for sort modes title (letter), artist and album, drawn by an ItemDecoration so adapter positions and click callbacks are unchanged. MainActivity.listMode feeds it and calls invalidateItemDecorations when the sort mode changes.
+- TrackAdapter.setData(list, reshuffled): DiffUtil (moves on) for lists up to 2500 rows when at least 60 percent of the songs are shared; a sort change (animateNext) keeps the old full refresh plus layout animation. After a diff rows are re-bound with payload "shape" so first / last corners stay right.
+- Fade between songs: pref "crossfade" (0, 2, 4, 6, 8, 12 s, Settings > Playback). Single ExoPlayer, so it is a fade out of the song end and a fade in of the next one (volume dip), not an overlap. PlayerService.xfTick drives fadeGain, sleep timer drives sleepGain, applyVolume sets min of both so they never fight.
+- Sleep timer is owned by PlayerService only: Pb.sleep just writes "sleep_wall", Pb.sleepAt() derives the remaining time from it, SleepFade.java removed (it duplicated the service and would have paused at the old time after an extension).
+- Shake to extend: pref "sleep_shake" (default on). Accelerometer is registered only in the last 90 s of the timer; 4 jolts above 2.5 g within 0.9 s add 10 minutes from now (writes sleep_wall, vibrates, toast).
+- Design alignment: sheets (BtSheet, GroupSheet, SongInfo) body inset 14 -> 8 dp so their rows line up at 24 dp like Sheet.java text; Settings appearance card margin 14 -> 16 dp like every row card; strings unknown_album, seek_bar, cover_art added in values and values-ar. Seek bar and cover now have content descriptions.
+
+# Still open
+- Whisper model SHA-256 pin (needs the real hash), cleartext policy (kept on on purpose).
+- performClick in the custom touch listeners (MiniPlayer, LockActivity, PlayerPanel cover, QueueSheet, EqSheet): lint only, changing them risks double taps.
+- True overlapping crossfade needs a second player.
+- First thing next: run the GitHub Actions build and fix any compile error reported.

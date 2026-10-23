@@ -107,8 +107,164 @@ public class PlayerService extends MediaSessionService {
     private final SharedPreferences.OnSharedPreferenceChangeListener prefs = (sp, key) -> {
         if (BtAudio.isKey(key)) BtAudio.refresh();
         if ("skip_silence".equals(key) && player != null) player.setSkipSilenceEnabled(sp.getBoolean(key, false));
+        if ("sleep_wall".equals(key)) armSleep(sp.getLong(key, 0));
+        if ("crossfade".equals(key) && player != null) {
+            fadeInStart = 0;
+            h.removeCallbacks(xfTick);
+            h.post(xfTick);
+        }
         if ("lock_auto".equals(key) && player != null) OverlayAnchor.sync(this, player.getPlayWhenReady() && sp.getBoolean(key, true));
     };
+
+    private long sleepEnd, fadeInStart, lastShake;
+    private float sleepGain = 1f, fadeGain = 1f;
+    private android.hardware.SensorManager sensors;
+    private boolean shaking;
+
+    private void applyVolume() {
+        if (player == null) return;
+        float g = Math.min(sleepGain, fadeGain);
+        if (player.getVolume() != g) player.setVolume(g);
+    }
+
+    private final android.hardware.SensorEventListener shake = new android.hardware.SensorEventListener() {
+        private long first;
+        private int hits;
+
+        @Override
+        public void onSensorChanged(android.hardware.SensorEvent e) {
+            float g = (float) Math.sqrt(e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2])
+                    / android.hardware.SensorManager.GRAVITY_EARTH;
+            if (g < 2.5f) return;
+            long now = android.os.SystemClock.elapsedRealtime();
+            if (now - lastShake < 2000) return;
+            if (now - first > 900) {
+                first = now;
+                hits = 0;
+            }
+            if (++hits >= 4) {
+                hits = 0;
+                lastShake = now;
+                extendSleep();
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(android.hardware.Sensor s, int accuracy) {
+        }
+    };
+
+    private void startShake() {
+        if (shaking || !Store.flag(this, "sleep_shake", true)) return;
+        if (sensors == null) sensors = (android.hardware.SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        if (sensors == null) return;
+        android.hardware.Sensor s = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER);
+        if (s == null) return;
+        shaking = sensors.registerListener(shake, s, android.hardware.SensorManager.SENSOR_DELAY_UI);
+    }
+
+    private void stopShake() {
+        if (!shaking || sensors == null) return;
+        sensors.unregisterListener(shake);
+        shaking = false;
+    }
+
+    @SuppressWarnings("deprecation")
+    private void extendSleep() {
+        try {
+            Store.prefs(this).edit().putLong("sleep_wall", System.currentTimeMillis() + 10 * 60000L).apply();
+            android.os.Vibrator v = (android.os.Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+            if (v != null) {
+                if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createOneShot(70, 200));
+                else v.vibrate(70);
+            }
+            android.widget.Toast.makeText(this, R.string.sleep_extended, android.widget.Toast.LENGTH_SHORT).show();
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("sleep extend", e);
+        }
+    }
+
+    private final Runnable xfTick = new Runnable() {
+        @Override
+        public void run() {
+            if (player == null) return;
+            int secs = Store.crossfade(PlayerService.this);
+            float g = 1f;
+            boolean again = false;
+            if (secs > 0 && player.isPlaying()) {
+                again = true;
+                long ms = secs * 1000L, dur = player.getDuration();
+                if (dur != C.TIME_UNSET && dur > ms * 3) {
+                    if (player.getRepeatMode() != Player.REPEAT_MODE_ONE && player.hasNextMediaItem()) {
+                        long left = dur - player.getCurrentPosition();
+                        if (left < ms) g = Math.max(0f, left / (float) ms);
+                    }
+                    if (fadeInStart != 0) {
+                        long into = android.os.SystemClock.elapsedRealtime() - fadeInStart;
+                        if (into >= ms) fadeInStart = 0;
+                        else g = Math.min(g, into / (float) ms);
+                    }
+                } else {
+                    fadeInStart = 0;
+                }
+            } else {
+                fadeInStart = 0;
+            }
+            fadeGain = g * g;
+            applyVolume();
+            if (again) h.postDelayed(this, 100);
+        }
+    };
+
+    private final Runnable sleepRun = new Runnable() {
+        @Override
+        public void run() {
+            sleepEnd = 0;
+            stopShake();
+            try {
+                if (player != null) {
+                    player.pause();
+                    h.postDelayed(() -> {
+                        sleepGain = 1f;
+                        applyVolume();
+                    }, 700);
+                }
+                Store.prefs(PlayerService.this).edit().putLong("sleep_wall", 0).apply();
+            } catch (RuntimeException e) {
+                CrashGuard.nonFatal("sleep timer", e);
+            }
+        }
+    };
+
+    private final Runnable sleepFade = new Runnable() {
+        @Override
+        public void run() {
+            if (player == null || sleepEnd == 0) return;
+            long now = android.os.SystemClock.elapsedRealtime();
+            long into = now - (sleepEnd - 15000);
+            if (into >= 0) {
+                sleepGain = Math.max(0f, 1f - into / 15000f);
+                applyVolume();
+            }
+            if (sleepEnd - now <= 90000) startShake();
+            h.postDelayed(this, into < 0 ? Math.min(30000L, -into) : 400L);
+        }
+    };
+
+    private void armSleep(long wall) {
+        h.removeCallbacks(sleepRun);
+        h.removeCallbacks(sleepFade);
+        sleepEnd = 0;
+        stopShake();
+        sleepGain = 1f;
+        if (player == null) return;
+        applyVolume();
+        long left = wall - System.currentTimeMillis();
+        if (wall <= 0 || left <= 0) return;
+        sleepEnd = android.os.SystemClock.elapsedRealtime() + left;
+        h.postDelayed(sleepRun, left);
+        h.post(sleepFade);
+    }
 
     private final android.os.Handler saveTick = new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable saveRun = new Runnable() {
@@ -218,10 +374,15 @@ public class PlayerService extends MediaSessionService {
             @Override
             public void onMediaItemTransition(androidx.media3.common.MediaItem item, int reason) {
                 Resume.saveSoon(PlayerService.this, player);
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO && Store.crossfade(PlayerService.this) > 0) {
+                    fadeInStart = android.os.SystemClock.elapsedRealtime();
+                }
             }
 
             @Override
             public void onIsPlayingChanged(boolean playing) {
+                h.removeCallbacks(xfTick);
+                h.post(xfTick);
                 Resume.saveSoon(PlayerService.this, player);
                 saveTick.removeCallbacksAndMessages(null);
                 if (playing) saveTick.postDelayed(saveRun, 15000);
@@ -282,6 +443,7 @@ public class PlayerService extends MediaSessionService {
         f.addAction(Intent.ACTION_USER_PRESENT);
         ContextCompat.registerReceiver(this, screen, f, ContextCompat.RECEIVER_NOT_EXPORTED);
         Store.prefs(this).registerOnSharedPreferenceChangeListener(prefs);
+        armSleep(Store.prefs(this).getLong("sleep_wall", 0));
     }
 
     private final Runnable extendTask = new Runnable() {
@@ -447,6 +609,7 @@ public class PlayerService extends MediaSessionService {
         OverlayAnchor.sync(this, false);
         PlayerWidget.idle(this);
         saveTick.removeCallbacksAndMessages(null);
+        stopShake();
         if (player != null) Resume.save(this, player);
         PlayStats.flush(this);
         GroupAudio.detach();

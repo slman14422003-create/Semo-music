@@ -102,7 +102,7 @@ public class SettingsActivity extends AppCompatActivity {
             card.addView(r, rp);
         }
         LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2);
-        cp.setMargins(Ui.dp(this, 14), 0, Ui.dp(this, 14), 0);
+        cp.setMargins(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
         card.setLayoutParams(cp);
         return card;
     }
@@ -233,6 +233,10 @@ public class SettingsActivity extends AppCompatActivity {
         LinearLayout pb = group(col);
         pb.addView(Ui.toggleRow(this, getString(R.string.skip_silence), getString(R.string.skip_silence_sub),
                 Store.flag(this, "skip_silence", false), (v, on) -> Store.setFlag(this, "skip_silence", on)));
+        pb.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.crossfade_title), getString(R.string.crossfade_sub),
+                crossfadeLabel(), false, v -> pickCrossfade()));
+        pb.addView(Ui.toggleRow(this, getString(R.string.sleep_shake_title), getString(R.string.sleep_shake_sub),
+                Store.flag(this, "sleep_shake", true), (v, on) -> Store.setFlag(this, "sleep_shake", on)));
         pb.addView(Ui.toggleRow(this, getString(R.string.autoplay_title), getString(R.string.autoplay_sub),
                 Store.autoplay(this), (v, on) -> Store.setFlag(this, "autoplay", on)));
         pb.addView(Ui.toggleRow(this, getString(R.string.resume_title), getString(R.string.resume_sub),
@@ -311,6 +315,29 @@ public class SettingsActivity extends AppCompatActivity {
             l.add(Sheet.chips(labels, sel, 2, i -> {
                 Store.setMinDur(this, secs[i]);
                 dirty = true;
+                recreate();
+            }));
+            return l;
+        });
+    }
+
+    private String crossfadeLabel() {
+        int s = Store.crossfade(this);
+        return s == 0 ? getString(R.string.crossfade_off) : getString(R.string.crossfade_secs, s);
+    }
+
+    private void pickCrossfade() {
+        final int[] secs = {0, 2, 4, 6, 8, 12};
+        Sheet.show(this, getString(R.string.crossfade_title), () -> {
+            List<Sheet.Item> l = new ArrayList<>();
+            CharSequence[] labels = new CharSequence[secs.length];
+            int sel = -1;
+            for (int i = 0; i < secs.length; i++) {
+                labels[i] = secs[i] == 0 ? getString(R.string.crossfade_off) : getString(R.string.crossfade_secs, secs[i]);
+                if (Store.crossfade(this) == secs[i]) sel = i;
+            }
+            l.add(Sheet.chips(labels, sel, 3, i -> {
+                Store.setCrossfade(this, secs[i]);
                 recreate();
             }));
             return l;

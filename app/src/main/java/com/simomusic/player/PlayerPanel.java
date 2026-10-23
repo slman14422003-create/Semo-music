@@ -115,6 +115,7 @@ public final class PlayerPanel extends FrameLayout {
         col.addView(top, Ui.lp(-1, -2));
 
         CoverBox cover = new CoverBox(d, 340);
+        cover.setContentDescription(d.getString(R.string.cover_art));
         cover.setPadding(0, Ui.dp(a, 14), 0, Ui.dp(a, 14));
         cover.setCover(np.art);
         col.addView(cover, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -365,7 +366,7 @@ public final class PlayerPanel extends FrameLayout {
 
     private void refreshExtrasInner() {
         heart(false);
-        Ui.tint(timer, Pb.sleepAt > 0 ? R.color.accent_text : R.color.text_primary);
+        Ui.tint(timer, Pb.sleepAt() > 0 ? R.color.accent_text : R.color.text_primary);
         final Context app = act.getApplicationContext();
         Bg.query("bluetooth state", () -> {
             final boolean on = BtAudio.connected(app);

@@ -80,11 +80,9 @@ public class PickSongsActivity extends AppCompatActivity implements TrackAdapter
     }
 
     private void applyFilter() {
-        String q = search.getText().toString().trim().toLowerCase(Locale.getDefault());
+        String[] tk = Norm.tokens(search.getText().toString());
         List<Track> f = new ArrayList<>();
-        for (Track t : pool) {
-            if (q.isEmpty() || t.title.toLowerCase().contains(q) || (t.artist != null && t.artist.toLowerCase().contains(q))) f.add(t);
-        }
+        for (Track t : pool) if (tk.length == 0 || Norm.matches(t.key, tk)) f.add(t);
         ad.setData(f);
     }
 

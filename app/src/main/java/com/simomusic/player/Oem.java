@@ -14,7 +14,7 @@ public final class Oem {
     }
 
     private static String maker() {
-        return (Build.MANUFACTURER + " " + Build.BRAND).toLowerCase();
+        return (Build.MANUFACTURER + " " + Build.BRAND).toLowerCase(java.util.Locale.ROOT);
     }
 
     public static boolean xiaomi() {

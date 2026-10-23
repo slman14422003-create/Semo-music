@@ -33,8 +33,6 @@ public final class Pb {
     private static final Set<Player.Listener> LS = new CopyOnWriteArraySet<>();
     private static final List<Runnable> WAIT = new ArrayList<>();
     private static final Handler H = new Handler(Looper.getMainLooper());
-    private static Runnable sleepTask;
-    public static long sleepAt;
     private static final Set<Runnable> DISC = new CopyOnWriteArraySet<>();
 
     /** Called on the main thread when the player service went away (closed from recents, notification, ...). */
@@ -254,19 +252,14 @@ public final class Pb {
     }
 
     public static void sleep(int minutes) {
-        SleepFade.cancel();
-        if (sleepTask != null) H.removeCallbacks(sleepTask);
-        sleepTask = null;
-        sleepAt = 0;
-        if (minutes > 0) {
-            sleepAt = SystemClock.elapsedRealtime() + minutes * 60000L;
-            sleepTask = () -> {
-                if (ctl != null) ctl.pause();
-                sleepAt = 0;
-                SleepFade.finish();
-            };
-            H.postDelayed(sleepTask, minutes * 60000L);
-            SleepFade.start(minutes * 60000L);
+        if (appCtx != null) {
+            Store.prefs(appCtx).edit().putLong("sleep_wall", minutes > 0 ? System.currentTimeMillis() + minutes * 60000L : 0L).apply();
         }
+    }
+
+    public static long sleepAt() {
+        if (appCtx == null) return 0;
+        long left = Store.prefs(appCtx).getLong("sleep_wall", 0) - System.currentTimeMillis();
+        return left > 0 ? SystemClock.elapsedRealtime() + left : 0;
     }
 }

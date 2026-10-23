@@ -40,28 +40,34 @@ public final class WhisperEngine implements SpeechEngine {
         void percent(int p);
     }
 
-    /** Blocking download of the model (run on a background thread). Returns true on success. */
+    /** Blocking download of the model (run on a background thread). Resumes a partial file. Returns true on success. */
     public static boolean download(Context c, Progress cb, java.util.function.BooleanSupplier cancelled) {
         File dst = modelFile(c);
         File tmp = new File(dst.getPath() + ".part");
         HttpURLConnection con = null;
         try {
             dst.getParentFile().mkdirs();
+            long have = tmp.isFile() ? tmp.length() : 0;
             con = (HttpURLConnection) new URL(MODEL_URL).openConnection();
             con.setConnectTimeout(15000);
             con.setReadTimeout(30000);
             con.setInstanceFollowRedirects(true);
-            if (con.getResponseCode() != 200) return false;
+            if (have > 0) con.setRequestProperty("Range", "bytes=" + have + "-");
+            int code = con.getResponseCode();
+            boolean part = code == 206;
+            if (code != 200 && !part) {
+                if (code == 416) tmp.delete();
+                return false;
+            }
+            if (!part) have = 0;
             long total = con.getContentLengthLong();
-            try (InputStream in = con.getInputStream(); OutputStream out = new FileOutputStream(tmp)) {
+            if (total > 0) total += have;
+            try (InputStream in = con.getInputStream(); OutputStream out = new FileOutputStream(tmp, part)) {
                 byte[] buf = new byte[64 * 1024];
-                long got = 0;
+                long got = have;
                 int last = -1, n;
                 while ((n = in.read(buf)) > 0) {
-                    if (cancelled.getAsBoolean()) {
-                        tmp.delete();
-                        return false;
-                    }
+                    if (cancelled.getAsBoolean()) return false;
                     out.write(buf, 0, n);
                     got += n;
                     if (total > 0) {
@@ -77,9 +83,9 @@ public final class WhisperEngine implements SpeechEngine {
                 tmp.delete();
                 return false;
             }
+            if (dst.exists()) dst.delete();
             return tmp.renameTo(dst);
         } catch (Throwable e) {
-            tmp.delete();
             return false;
         } finally {
             if (con != null) con.disconnect();

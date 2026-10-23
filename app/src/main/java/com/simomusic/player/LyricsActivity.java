@@ -568,7 +568,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                     int msg = status == AiLyrics.BAD_KEY ? R.string.ai_gen_bad_key
                             : status == AiLyrics.LIMIT ? R.string.ai_gen_limit
                             : status == AiLyrics.WEAK ? R.string.ai_gen_weak : R.string.ai_sync_failed;
-                    if (status == AiLyrics.BAD_KEY) Store.prefs(this).edit().remove(KEY_PREF).apply();
+                    if (status == AiLyrics.BAD_KEY) Store.setGroqKey(this, "");
                     String why = AiLyrics.lastError;
                     Ui.toast(this, msg == R.string.ai_sync_failed && why != null ? getString(msg) + " (" + why + ")" : getString(msg));
                     showState(S_MISS);

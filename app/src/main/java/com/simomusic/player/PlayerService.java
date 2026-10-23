@@ -110,8 +110,8 @@ public class PlayerService extends MediaSessionService {
         if ("sleep_wall".equals(key)) armSleep(sp.getLong(key, 0));
         if ("crossfade".equals(key) && player != null) {
             fadeInStart = 0;
-            h.removeCallbacks(xfTick);
-            h.post(xfTick);
+            h.removeCallbacks(this.xfTick);
+            h.post(this.xfTick);
         }
         if ("lock_auto".equals(key) && player != null) OverlayAnchor.sync(this, player.getPlayWhenReady() && sp.getBoolean(key, true));
     };

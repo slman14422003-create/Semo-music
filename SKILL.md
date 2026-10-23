@@ -151,3 +151,7 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - performClick in the custom touch listeners (MiniPlayer, LockActivity, PlayerPanel cover, QueueSheet, EqSheet): lint only, changing them risks double taps.
 - True overlapping crossfade needs a second player.
 - First thing next: run the GitHub Actions build and fix any compile error reported.
+
+# Build fix after the features
+- PlayerService: prefs listener lambda used xfTick before its declaration (illegal forward reference); now this.xfTick.
+- LyricsActivity: KEY_PREF no longer exists since the key moved to the secret prefs; bad key now clears it with Store.setGroqKey(this, "").

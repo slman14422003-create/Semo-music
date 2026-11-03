@@ -701,6 +701,26 @@ public final class Ui {
         return w;
     }
 
+    /** Thumb that always contrasts with the track: dark on a light accent (white accent made the whole switch look blank), white otherwise. */
+    private static android.graphics.drawable.Drawable switchThumb(Context c) {
+        int accent = color(c, R.color.accent);
+        boolean light = androidx.core.graphics.ColorUtils.calculateLuminance(accent) > 0.55;
+        int on = light ? 0xFF101014 : 0xFFFFFFFF;
+        int off = color(c, R.color.text_secondary);
+        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
+        sl.addState(new int[]{android.R.attr.state_checked}, thumbOval(on, dp(c, 22), dp(c, 3)));
+        sl.addState(new int[]{}, thumbOval(off, dp(c, 16), dp(c, 6)));
+        return sl;
+    }
+
+    private static android.graphics.drawable.Drawable thumbOval(int col, int size, int inset) {
+        GradientDrawable g = new GradientDrawable();
+        g.setShape(GradientDrawable.OVAL);
+        g.setColor(col);
+        g.setSize(size, size);
+        return new android.graphics.drawable.InsetDrawable(g, inset);
+    }
+
     public static View toggleRow(Context c, CharSequence title, CharSequence sub, boolean on,
                                  final CompoundButton.OnCheckedChangeListener l) {
         LinearLayout card = new LinearLayout(c);
@@ -711,7 +731,7 @@ public final class Ui {
         final SwitchCompat sw = new SwitchCompat(c);
         sw.setBackground(null);
         sw.setShowText(false);
-        sw.setThumbDrawable(ContextCompat.getDrawable(c, R.drawable.switch_thumb));
+        sw.setThumbDrawable(switchThumb(c));
         sw.setTrackDrawable(ContextCompat.getDrawable(c, R.drawable.switch_track));
         sw.setChecked(on);
         sw.setClickable(false);
@@ -787,23 +807,10 @@ public final class Ui {
         return e;
     }
 
-    /** Loading placeholder that mirrors the real list (two pills + rows), so the screen never jumps. */
+    /** Loading placeholder that mirrors the real list (rows), so the screen never jumps. */
     public static LinearLayout skeleton(Context c) {
         LinearLayout col = new LinearLayout(c);
         col.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout pills = new LinearLayout(c);
-        pills.setPadding(dp(c, 20), dp(c, 6), dp(c, 20), dp(c, 10));
-        for (int i = 0; i < 2; i++) {
-            View p = new View(c);
-            GradientDrawable g = new GradientDrawable();
-            g.setCornerRadius(dp(c, 100));
-            g.setColor(color(c, R.color.surface));
-            p.setBackground(g);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(c, 50), 1f);
-            if (i > 0) lp.setMarginStart(dp(c, 10));
-            pills.addView(p, lp);
-        }
-        col.addView(pills);
         int[] w1 = {170, 210, 140, 190, 160, 220, 150, 200};
         for (int i = 0; i < w1.length; i++) {
             FrameLayout shell = new FrameLayout(c);

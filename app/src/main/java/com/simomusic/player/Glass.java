@@ -43,7 +43,18 @@ public final class Glass {
     public static void sheet(View root, final boolean card) {
         Context c = root.getContext();
         final int r = Ui.dp(c, 32);
-        root.setBackground(new SnapGlass(c, snapshot(c), r, card));
+        Activity a = activity(c);
+        View decor = a != null && !a.isFinishing() ? a.getWindow().getDecorView() : null;
+        if (decor != null && decor.getWidth() > 0 && decor.getHeight() > 0) {
+            LiveGlass g = new LiveGlass(c, root, decor, 32, Ui.color(c, R.color.glass_sheet_tint));
+            g.setBlur(6);
+            g.setSaturation(1.15f);
+            g.setSheet(!card);
+            g.setTicking(true);
+            root.setBackground(g);
+        } else {
+            root.setBackground(new SnapGlass(c, snapshot(c), r, card));
+        }
         root.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View v, Outline o) {

@@ -827,12 +827,12 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                             Store.create(MainActivity.this, name);
                             refresh();
                         }));
-                Ui.shape(MainActivity.this, row.findViewById(R.id.card), true, n == 1, R.color.accent_soft);
+                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), true, false, 72, 0);
             } else if (pos <= kinds.length) {
                 final int kind = kinds[pos - 1];
                 row = Ui.settingRow(MainActivity.this, MIX_ICON[kind], getString(MIX_TITLE[kind]), getString(MIX_SUB[kind]),
                         null, false, v -> playMix(kind));
-                Ui.shape(MainActivity.this, row.findViewById(R.id.card), false, pos == n - 1, R.color.accent_soft);
+                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, pos != n - 1, 72, 0);
             } else {
                 final Store.Playlist pl = Store.playlists(MainActivity.this).get(pos - 1 - kinds.length);
                 int cnt = Library.count(pl.ids);
@@ -844,7 +844,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                             i.putExtra("pid", pl.id);
                             Ui.go(MainActivity.this, i);
                         });
-                Ui.shape(MainActivity.this, row.findViewById(R.id.card), false, pos == n - 1, R.color.surface);
+                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, pos != n - 1, 72, 0);
             }
             f.addView(row);
         }

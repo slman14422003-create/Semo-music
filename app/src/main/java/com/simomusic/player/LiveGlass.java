@@ -26,7 +26,18 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     private final float radius;
     private final float stroke;
     private final int ds;
-    private final int blurR;
+    private int blurR;
+    private boolean sheet;
+    private boolean ticking;
+    private final ColorMatrix sat = new ColorMatrix();
+    private final Runnable ticker = new Runnable() {
+        @Override
+        public void run() {
+            if (vto == null) return;
+            owner.invalidate();
+            owner.postDelayed(this, 160);
+        }
+    };
     private final int bgColor;
     private final int hi;
     private final int lo;
@@ -62,14 +73,31 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         hi = Ui.color(c, R.color.glass_hi);
         lo = Ui.color(c, R.color.glass_lo);
         sheenTop = Ui.color(c, R.color.glass_sheen);
-        ColorMatrix cm = new ColorMatrix();
-        cm.setSaturation(1.55f);
-        bmpPaint.setColorFilter(new ColorMatrixColorFilter(cm));
+        setSaturation(1.55f);
         strokePaint.setStyle(Paint.Style.STROKE);
         strokePaint.setStrokeWidth(stroke);
         solidPaint.setColor(ColorUtils.compositeColors(tint, bgColor));
         owner.addOnAttachStateChangeListener(this);
         if (owner.isAttachedToWindow()) onViewAttachedToWindow(owner);
+    }
+
+    public void setSaturation(float s) {
+        sat.setSaturation(s);
+        bmpPaint.setColorFilter(new ColorMatrixColorFilter(sat));
+    }
+
+    public void setBlur(int radius) {
+        blurR = radius;
+    }
+
+    /** Bottom sheet: the rim and the corners are drawn as if the shape continued below the window. */
+    public void setSheet(boolean on) {
+        sheet = on;
+    }
+
+    /** Keeps refreshing while attached (a sheet over a screen that keeps changing). */
+    public void setTicking(boolean on) {
+        ticking = on;
     }
 
     public void setTint(int color) {
@@ -87,12 +115,14 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     public void onViewAttachedToWindow(@NonNull View v) {
         vto = owner.getViewTreeObserver();
         if (vto.isAlive()) vto.addOnPreDrawListener(this);
+        if (ticking) owner.postDelayed(ticker, 160);
     }
 
     @Override
     public void onViewDetachedFromWindow(@NonNull View v) {
         if (vto != null && vto.isAlive()) vto.removeOnPreDrawListener(this);
         vto = null;
+        owner.removeCallbacks(ticker);
     }
 
     @Override
@@ -119,8 +149,8 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
                 cv = new Canvas(bmp);
                 px = new int[bw * bh];
             }
-            owner.getLocationInWindow(a);
-            source.getLocationInWindow(b);
+            owner.getLocationOnScreen(a);
+            source.getLocationOnScreen(b);
             cv.save();
             cv.scale(1f / ds, 1f / ds);
             cv.drawColor(bgColor);
@@ -162,7 +192,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         }
         canvas.drawRect(r.left, r.top, r.right, r.top + r.height() * 0.55f, sheenPaint);
         float in = stroke / 2f;
-        rect.set(r.left + in, r.top + in, r.right - in, r.bottom - in);
+        rect.set(r.left + in, r.top + in, r.right - in, r.bottom + (sheet ? radius : 0) - in);
         float rr = Math.max(0f, radius - in);
         canvas.drawRoundRect(rect, rr, rr, strokePaint);
     }

@@ -12,6 +12,7 @@ final class WavePainter {
     private final Paint played = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint rest = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint thumb = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint inner = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final RectF r = new RectF();
     private final float ampMax, wave, stroke, thumbW, thumbH, gap, edge;
@@ -25,7 +26,7 @@ final class WavePainter {
         stroke = Ui.dp(c, strokeDp);
         thumbW = Ui.dp(c, thumbWDp);
         thumbH = Ui.dp(c, thumbHDp);
-        gap = thumbW * 2.2f;
+        gap = thumbH * 0.5f + Ui.dp(c, 3);
         edge = Ui.dp(c, 10);
         played.setStyle(Paint.Style.STROKE);
         played.setStrokeCap(Paint.Cap.ROUND);
@@ -40,6 +41,7 @@ final class WavePainter {
         played.setColor(fill);
         thumb.setColor(fill);
         rest.setColor(track);
+        inner.setColor(androidx.core.graphics.ColorUtils.calculateLuminance(fill) > 0.7 ? 0xFF101014 : 0xFFFFFFFF);
     }
 
     void waving(boolean on) {
@@ -89,9 +91,9 @@ final class WavePainter {
             path.lineTo(end, cy);
         }
         cv.drawPath(path, played);
-        float h = thumbH * thumbScale;
-        r.set(px - thumbW / 2f, cy - h / 2f, px + thumbW / 2f, cy + h / 2f);
-        cv.drawRoundRect(r, thumbW / 2f, thumbW / 2f, thumb);
+        float rad = thumbH * 0.5f * thumbScale;
+        cv.drawCircle(px, cy, rad, thumb);
+        cv.drawCircle(px, cy, Math.max(1f, rad - Math.max(Ui.dp(v.getContext(), 2), rad * 0.32f)), inner);
 
         boolean moving = Math.abs(target - shown) > 0.0004f || amp > 0.02f || waving
                 || Math.abs(thumbScale - (dragging ? 1.3f : 1f)) > 0.01f;

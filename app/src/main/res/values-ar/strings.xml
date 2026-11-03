@@ -459,4 +459,15 @@
     <string name="cover_art">غلاف الألبوم، اسحب لتغيير الأغنية</string>
     <string name="search_prompt">ابحث في موسيقاك</string>
     <string name="no_results">لا توجد نتائج</string>
+    <string name="app_icon">أيقونة التطبيق</string>
+    <string name="app_icon_hint">تتغير أيقونة الشاشة الرئيسية خلال ثوانٍ قليلة.</string>
+    <string name="icon_blue">أزرق</string>
+    <string name="icon_violet">بنفسجي</string>
+    <string name="icon_green">أخضر</string>
+    <string name="icon_pink">وردي</string>
+    <string name="icon_red">أحمر</string>
+    <string name="icon_orange">برتقالي</string>
+    <string name="icon_gold">ذهبي</string>
+    <string name="icon_midnight">أزرق ليلي</string>
+    <string name="icon_charcoal">رمادي داكن</string>
 </resources>

@@ -435,4 +435,15 @@
     <string name="cover_art">Album cover, swipe to change the song</string>
     <string name="search_prompt">Search your music</string>
     <string name="no_results">No results</string>
+    <string name="app_icon">App icon</string>
+    <string name="app_icon_hint">The home screen icon changes within a few seconds.</string>
+    <string name="icon_blue">Blue</string>
+    <string name="icon_violet">Violet</string>
+    <string name="icon_green">Green</string>
+    <string name="icon_pink">Pink</string>
+    <string name="icon_red">Red</string>
+    <string name="icon_orange">Orange</string>
+    <string name="icon_gold">Gold</string>
+    <string name="icon_midnight">Midnight blue</string>
+    <string name="icon_charcoal">Dark gray</string>
 </resources>

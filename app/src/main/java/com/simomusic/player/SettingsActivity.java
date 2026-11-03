@@ -86,7 +86,7 @@ public class SettingsActivity extends AppCompatActivity {
                 if (i == sel) {
                     ImageView ck = new ImageView(this);
                     ck.setImageResource(R.drawable.ic_check);
-                    ck.setColorFilter(0xFFFFFFFF);
+                    ck.setColorFilter(androidx.core.graphics.ColorUtils.calculateLuminance(Accent.swatch(this, i, night)) > 0.7 ? 0xFF000000 : 0xFFFFFFFF);
                     int p = Ui.dp(this, 12);
                     ck.setPadding(p, p, p, p);
                     cell.addView(ck, new FrameLayout.LayoutParams(d, d, android.view.Gravity.CENTER));
@@ -193,6 +193,8 @@ public class SettingsActivity extends AppCompatActivity {
         LinearLayout gen = group(col);
         gen.addView(Ui.settingRow(this, R.drawable.ic_language, getString(R.string.language), langLabel(), null, false, v -> pickLang()));
         gen.addView(Ui.settingRow(this, R.drawable.ic_play, getString(R.string.default_app), getString(R.string.default_app_sub), null, false, v -> pickDefault()));
+        gen.addView(Ui.settingRow(this, R.drawable.ic_music, getString(R.string.app_icon), getString(IconSwitcher.NAME[IconSwitcher.current(this)]), null, false,
+                v -> Ui.go(this, new android.content.Intent(this, IconActivity.class))));
         gen.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.upd_title),
                 getString(R.string.upd_row_sub, Updater.current(this)), null, false, v -> UpdateSheet.show(this)));
         Ui.group(this, gen);

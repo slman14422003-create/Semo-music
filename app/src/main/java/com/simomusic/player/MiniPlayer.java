@@ -47,7 +47,8 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
     private boolean expanded;
     private float ex;
     private int fullW;
-    private Runnable shownCb;
+    private int bottomCol, bottomExp;
+    private Runnable shownCb, expandCb;
     private String lastArt = "\u0000", lastId = "";
     private CharSequence lastTitle, lastArtist;
     private int lastIcon, lastIndex = -1;
@@ -101,8 +102,8 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         baseTint = Ui.color(c, R.color.glass_nav_tint);
         tintNow = baseTint;
         setPadding(Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4), Ui.dp(c, 4));
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.dp(c, 56), Ui.dp(c, 56), Gravity.BOTTOM | Gravity.END);
-        lp.setMargins(Ui.dp(c, 12), 0, Ui.dp(c, 12), Ui.dp(c, 90));
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Ui.dp(c, 56), Ui.dp(c, 56), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+        lp.setMargins(Ui.dp(c, 16), 0, Ui.dp(c, 16), Ui.dp(c, 12));
         setLayoutParams(lp);
         setVisibility(GONE);
         Ui.press(c, this);
@@ -367,14 +368,16 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         shownCb = r;
     }
 
-    public void setDock(int bottomMarginPx, int availW) {
-        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) getLayoutParams();
+    public void setOnExpand(Runnable r) {
+        expandCb = r;
+    }
+
+    /** Collapsed: the circle sits inside the tab bar. Expanded: a capsule that floats right above it. */
+    public void setDock(int collapsedBottom, int expandedBottom, int availW) {
+        bottomCol = collapsedBottom;
+        bottomExp = expandedBottom;
         fullW = availW;
-        if (lp.bottomMargin != bottomMarginPx) {
-            lp.bottomMargin = bottomMarginPx;
-            setLayoutParams(lp);
-        }
-        if (ex > 0f) applyEx(ex);
+        applyEx(ex);
     }
 
     public void collapse() {
@@ -391,6 +394,7 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         expanded = on;
         h.removeCallbacks(collapseRun);
         if (on) scheduleCollapse();
+        if (expandCb != null) expandCb.run();
         if (exAnim != null) exAnim.cancel();
         if (!animate) {
             applyEx(on ? 1f : 0f);
@@ -410,10 +414,17 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         int target = Math.max(fullW, small);
         ViewGroup.LayoutParams lp = getLayoutParams();
         int w = Math.round(small + (target - small) * f);
-        if (lp != null && lp.width != w) {
-            lp.width = w;
-            setLayoutParams(lp);
+        if (lp instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams fl = (FrameLayout.LayoutParams) lp;
+            int bm = Math.round(bottomCol + (bottomExp - bottomCol) * f);
+            if (fl.width != w || (bottomExp != 0 && fl.bottomMargin != bm)) {
+                fl.width = w;
+                if (bottomExp != 0) fl.bottomMargin = bm;
+                setLayoutParams(fl);
+            }
         }
+        glass.setAlpha(Math.round(255f * Math.min(1f, f * 1.8f)));
+        glass.invalidateSelf();
         float a = Math.max(0f, Math.min(1f, (f - 0.3f) / 0.7f));
         int vis = f <= 0.01f ? GONE : VISIBLE;
         art.setVisibility(vis);

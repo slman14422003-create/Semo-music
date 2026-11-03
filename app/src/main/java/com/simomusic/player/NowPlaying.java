@@ -84,13 +84,13 @@ public final class NowPlaying implements Player.Listener {
 
         info = new LinearLayout(c);
         info.setOrientation(LinearLayout.VERTICAL);
-        title = Ui.text(c, "", lock ? 22 : 26, R.color.text_primary);
+        title = Ui.text(c, "", lock ? 22 : 28, R.color.text_primary);
         title.setTypeface(Ui.titleFace(true));
         title.setMaxLines(2);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         title.setLineSpacing(0, 1.05f);
         // long titles shrink to fit two lines instead of being cut with "..."
-        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(title, 17, lock ? 22 : 26, 1,
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(title, 17, lock ? 22 : 28, 1,
                 android.util.TypedValue.COMPLEX_UNIT_SP);
         artist = Ui.text(c, "", 15, R.color.text_secondary);
         artist.setSingleLine(true);
@@ -227,6 +227,10 @@ public final class NowPlaying implements Player.Listener {
             controls.addView(set[i]);
         }
         Art.show(art, null, artPx);
+    }
+
+    public TextView upNextView() {
+        return upNext;
     }
 
     public int artPx() {

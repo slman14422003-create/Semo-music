@@ -42,6 +42,8 @@ public final class PlayerPanel extends FrameLayout {
     private final Host host;
     private final NowPlaying np;
     private final ImageButton fav, timer, bt;
+    private EqView eq;
+    private Halo halo;
     private final LinearLayout col;
     private final int slop, maxRadius;
     private View parBg, parGlow;   // parallax layers
@@ -79,7 +81,10 @@ public final class PlayerPanel extends FrameLayout {
         addView(bg, new LayoutParams(-1, -1));
         ArtGlow glow = new ArtGlow(d);
         addView(glow, new LayoutParams(-1, -1));
-        np.onTint = glow::setColor;
+        np.onTint = tintColor -> {
+            glow.setColor(tintColor);
+            if (halo != null) halo.setColor(tintColor);
+        };
         parGlow = glow;
         View scrim = new View(d);
         scrim.setBackgroundResource(R.drawable.bg_scrim);
@@ -103,20 +108,32 @@ public final class PlayerPanel extends FrameLayout {
         LinearLayout top = new LinearLayout(d);
         top.setGravity(Gravity.CENTER_VERTICAL);
         top.addView(Ui.icon(d, R.drawable.ic_arrow_down, R.string.close, v -> collapse(true)));
-        TextView cap = Ui.text(d, a.getString(R.string.now_playing), 14, R.color.text_secondary);
-        cap.setGravity(Gravity.CENTER);
+        LinearLayout chip = new LinearLayout(d);
+        chip.setGravity(Gravity.CENTER_VERTICAL);
+        chip.setBackgroundResource(R.drawable.bg_pill_glass);
+        chip.setPadding(Ui.dp(a, 14), Ui.dp(a, 8), Ui.dp(a, 16), Ui.dp(a, 8));
+        eq = new EqView(d);
+        chip.addView(eq, new LinearLayout.LayoutParams(Ui.dp(a, 16), Ui.dp(a, 14)));
+        TextView cap = Ui.text(d, a.getString(R.string.now_playing), 13, R.color.text_primary);
         cap.setTypeface(Typeface.DEFAULT_BOLD);
         cap.setLetterSpacing(0.04f);
-        top.addView(cap, Ui.weight(1));
+        LinearLayout.LayoutParams capLp = Ui.lp(-2, -2);
+        capLp.setMarginStart(Ui.dp(a, 8));
+        chip.addView(cap, capLp);
+        top.addView(Ui.space(d, 1f));
+        top.addView(chip, Ui.lp(-2, -2));
+        top.addView(Ui.space(d, 1f));
         ImageButton lyr = Ui.icon(d, R.drawable.ic_lyrics, R.string.lyrics, v -> Ui.go(a, new android.content.Intent(a, LyricsActivity.class)));
         ((LinearLayout.LayoutParams) lyr.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
         top.addView(lyr);
         top.addView(Ui.icon(d, R.drawable.ic_more, R.string.more, v -> Menus.more(a, this::refreshExtras)));
         col.addView(top, Ui.lp(-1, -2));
 
-        CoverBox cover = new CoverBox(d, 340);
+        CoverBox cover = new CoverBox(d, 360);
         cover.setContentDescription(d.getString(R.string.cover_art));
-        cover.setPadding(0, Ui.dp(a, 14), 0, Ui.dp(a, 14));
+        cover.setPadding(0, Ui.dp(a, 20), 0, Ui.dp(a, 14));
+        halo = new Halo(d);
+        cover.setHalo(halo);
         cover.setCover(np.art);
         col.addView(cover, new LinearLayout.LayoutParams(-1, 0, 1f));
         attachCoverSwipe(np.art);
@@ -124,64 +141,73 @@ public final class PlayerPanel extends FrameLayout {
         LinearLayout titleRow = new LinearLayout(d);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
         titleRow.addView(np.info, Ui.weight(1));
-        fav = Ui.flat(d, R.drawable.ic_heart, 52, R.string.favorite, v -> {
+        fav = Ui.icon(d, R.drawable.ic_heart, R.string.favorite, v -> {
             long id = Pb.currentId();
             if (id >= 0) Store.toggle(a, Store.FAV, id);
             heart(true);
         });
         titleRow.addView(fav);
         LinearLayout.LayoutParams tp = Ui.lp(-1, -2);
-        tp.setMargins(Ui.dp(a, 4), Ui.dp(a, 8), 0, 0);
+        tp.setMargins(Ui.dp(a, 4), Ui.dp(a, 6), 0, 0);
         col.addView(titleRow, tp);
+        TextView un = np.upNextView();
+        if (un != null && un.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams ul = (LinearLayout.LayoutParams) un.getLayoutParams();
+            ul.width = -2;
+            ul.topMargin = Ui.dp(a, 10);
+            un.setLayoutParams(ul);
+            un.setBackgroundResource(R.drawable.bg_pill_glass);
+            un.setPadding(Ui.dp(a, 14), Ui.dp(a, 6), Ui.dp(a, 14), Ui.dp(a, 6));
+        }
 
-        LinearLayout glassCard = new LinearLayout(d);
-        glassCard.setOrientation(LinearLayout.VERTICAL);
-        glassCard.setBackgroundResource(R.drawable.bg_glass);
-        glassCard.setPadding(Ui.dp(a, 16), Ui.dp(a, 12), Ui.dp(a, 16), Ui.dp(a, 8));
-        glassCard.addView(np.seekBlock, Ui.lp(-1, -2));
+        // one glass deck: progress, transport and the six extra buttons, right under the thumb
+        LinearLayout deck = new LinearLayout(d);
+        deck.setOrientation(LinearLayout.VERTICAL);
+        deck.setBackgroundResource(R.drawable.bg_glass_deck);
+        deck.setPadding(Ui.dp(a, 18), Ui.dp(a, 14), Ui.dp(a, 18), Ui.dp(a, 8));
+        deck.addView(np.seekBlock, Ui.lp(-1, -2));
         LinearLayout.LayoutParams cp = Ui.lp(-1, -2);
-        cp.topMargin = Ui.dp(a, 4);
-        glassCard.addView(np.controls, cp);
-        LinearLayout.LayoutParams gcp = Ui.lp(-1, -2);
-        gcp.topMargin = Ui.dp(a, 10);
-        col.addView(glassCard, gcp);
+        cp.topMargin = Ui.dp(a, 2);
+        deck.addView(np.controls, cp);
+        View line = new View(d);
+        line.setBackgroundColor(0x1FFFFFFF);
+        LinearLayout.LayoutParams lnp = Ui.lp(-1, 1);
+        lnp.setMargins(Ui.dp(a, 6), Ui.dp(a, 10), Ui.dp(a, 6), Ui.dp(a, 4));
+        deck.addView(line, lnp);
 
-        // Bottom row, right under the transport buttons (the easiest place for the thumb): shuffle, add, queue, Bluetooth,
-        // timer, repeat. Nothing important sits only at the top of the screen.
         LinearLayout extras = new LinearLayout(d);
         extras.setGravity(Gravity.CENTER_VERTICAL);
-        timer = Ui.icon(d, R.drawable.ic_timer, R.string.sleep_timer, v -> Menus.sleep(a, this::refreshExtras));
-        bt = Ui.icon(d, R.drawable.ic_bluetooth, R.string.bt_title, v -> BtSheet.show(a));
-        for (ImageButton b : new ImageButton[]{np.shuffle, np.repeat}) {     // same round look as the other four
-            b.setBackgroundResource(R.drawable.bg_icon_btn);
-            b.setScaleType(ImageView.ScaleType.CENTER);
-            b.setPadding(0, 0, 0, 0);
-        }
-        View[] ex = {
+        timer = Ui.flat(d, R.drawable.ic_timer, 46, R.string.sleep_timer, v -> Menus.sleep(a, this::refreshExtras));
+        bt = Ui.flat(d, R.drawable.ic_bluetooth, 46, R.string.bt_title, v -> BtSheet.show(a));
+        ImageButton[] ex = {
                 np.shuffle,
-                Ui.icon(d, R.drawable.ic_add, R.string.add_to_playlist, v -> {
+                Ui.flat(d, R.drawable.ic_add, 46, R.string.add_to_playlist, v -> {
                     long id = Pb.currentId();
                     if (id >= 0) Menus.addToPlaylist(a, id, () -> heart(false));
                 }),
-                Ui.icon(d, R.drawable.ic_list, R.string.up_next, v -> Menus.queue(a)),
+                Ui.flat(d, R.drawable.ic_list, 46, R.string.up_next, v -> Menus.queue(a)),
                 bt,
                 timer,
                 np.repeat};
-        for (int i = 0; i < ex.length; i++) {
-            if (i > 0) extras.addView(Ui.space(d, 1f));
-            ex[i].setLayoutParams(new LinearLayout.LayoutParams(Ui.dp(a, 46), Ui.dp(a, 46)));
-            extras.addView(ex[i]);
+        for (ImageButton b : ex) {
+            b.setScaleType(ImageView.ScaleType.CENTER);
+            b.setPadding(0, 0, 0, 0);
+            extras.addView(b, new LinearLayout.LayoutParams(0, Ui.dp(a, 46), 1f));
         }
-        // one compact group in the middle, not stretched over a wide screen
-        int avail = a.getResources().getDisplayMetrics().widthPixels - Ui.dp(a, 44);
-        LinearLayout.LayoutParams xp = Ui.lp(Math.min(avail, Ui.dp(a, 340)), -2);
-        xp.gravity = Gravity.CENTER_HORIZONTAL;
-        xp.topMargin = Ui.dp(a, 16);
-        col.addView(extras, xp);
+        deck.addView(extras, Ui.lp(-1, -2));
+        LinearLayout.LayoutParams dkp = Ui.lp(-1, -2);
+        dkp.topMargin = Ui.dp(a, 12);
+        col.addView(deck, dkp);
+        col.setClipChildren(false);
+        setClipChildren(false);
 
         addView(col, new LayoutParams(-1, -1));
         Ui.edgeToEdge(a, col);
         np.onRefresh = () -> {
+            androidx.media3.session.MediaController mc = Pb.get();
+            boolean live = mc != null && mc.isPlaying();
+            eq.setAnimating(live);
+            halo.setPlaying(live);
             long id = Pb.currentId();
             if (id == lastExtrasId) return;
             lastExtrasId = id;

@@ -8,6 +8,7 @@ import android.graphics.Outline;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.view.Gravity;
 import android.view.View;
@@ -501,6 +502,38 @@ public final class Ui {
 
     public static void shape(Context c, View card, boolean first, boolean last, int fillRes) {
         shape(c, card, first, last, fillRes, 0);
+    }
+
+    /**
+     * List row without a card: transparent, a soft ripple and a hairline under the text (not under the cover),
+     * like Apple Music. The playing / selected row is the only one that gets a tinted rounded card.
+     */
+    public static void flatRow(Context c, View card, boolean highlight, boolean divider, int insetStartDp, int strokeCol) {
+        float r = dp(c, 20);
+        GradientDrawable fill = new GradientDrawable();
+        fill.setCornerRadius(r);
+        if (highlight) {
+            fill.setColor(color(c, R.color.accent_soft));
+            fill.setStroke(Math.max(1, dp(c, 1) / 2), strokeCol != 0 ? strokeCol : color(c, R.color.row_stroke));
+        } else {
+            fill.setColor(0);
+        }
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(0xFFFFFFFF);
+        mask.setCornerRadius(r);
+        RippleDrawable rd = new RippleDrawable(ColorStateList.valueOf(color(c, R.color.ripple)), fill, mask);
+        if (highlight || !divider) {
+            card.setBackground(rd);
+            return;
+        }
+        GradientDrawable line = new GradientDrawable();
+        line.setColor(color(c, R.color.row_stroke));
+        LayerDrawable ld = new LayerDrawable(new android.graphics.drawable.Drawable[]{rd, line});
+        ld.setLayerGravity(1, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+        ld.setLayerHeight(1, Math.max(1, dp(c, 1) / 2));
+        ld.setLayerInsetStart(1, dp(c, insetStartDp));
+        ld.setLayerInsetEnd(1, dp(c, 12));
+        card.setBackground(ld);
     }
 
     public static void shape(Context c, View card, boolean first, boolean last, int fillRes, int strokeCol) {

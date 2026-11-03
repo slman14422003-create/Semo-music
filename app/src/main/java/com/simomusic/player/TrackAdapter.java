@@ -384,7 +384,7 @@ public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
         int shape = (top ? 1 : 0) | (bottom ? 2 : 0) | (hi ? 4 : 0);
         if (shape != h.shapeState) {
             h.shapeState = shape;
-            Ui.shape(ctx, h.card, top, bottom, hi ? R.color.accent_soft : R.color.surface,
+            Ui.flatRow(ctx, h.card, hi, !bottom, 98,
                     hi ? (Ui.color(ctx, R.color.accent) & 0x00FFFFFF) | 0x55000000 : 0);
         }
         boolean mark = isCur && !select;

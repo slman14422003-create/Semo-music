@@ -13,6 +13,7 @@ public final class WaveSeekBar extends AppCompatSeekBar {
     public WaveSeekBar(Context c) {
         super(c);
         wp = new WavePainter(c, 3, 26, 4, 4, 24);
+        wp.flat(true);
         setBackground(null);
         setThumb(null);
         setSplitTrack(false);

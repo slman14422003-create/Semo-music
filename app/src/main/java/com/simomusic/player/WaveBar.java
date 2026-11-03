@@ -10,6 +10,7 @@ public final class WaveBar extends ProgressBar {
     public WaveBar(Context c) {
         super(c, null, android.R.attr.progressBarStyleHorizontal);
         wp = new WavePainter(c, 2, 20, 3, 3, 12);
+        wp.flat(true);
         wp.colors(Ui.color(c, R.color.accent), Ui.color(c, R.color.surface_high));
     }
 

@@ -19,6 +19,7 @@ public final class Accent {
         R.style.AccentGreen,
         R.style.AccentTeal,
         R.style.AccentGold,
+        R.style.AccentWhite,     // light: black accent; dark: AMOLED black with white highlights
         R.style.AccentSystem     // Android 12+: follows the wallpaper palette chosen in One UI (Settings > Wallpaper and style)
     };
 
@@ -32,11 +33,12 @@ public final class Accent {
         {0xFF15803D, 0xFF34D399},
         {0xFF0F766E, 0xFF2DD4BF},
         {0xFFA16207, 0xFFFACC15},
+        {0xFF0A0A0F, 0xFFFFFFFF},
         {0xFF2F5BE8, 0xFF3D6BFF}   // placeholder: the real swatch of the system accent comes from swatch()
     };
 
     /** The system accent needs Android 12 (Material You palette); older phones only get the eight fixed ones. */
-    public static final int SYSTEM = 8;
+    public static final int SYSTEM = 9;
 
     public static int count() {
         return android.os.Build.VERSION.SDK_INT >= 31 ? STYLES.length : STYLES.length - 1;
@@ -53,11 +55,18 @@ public final class Accent {
     public static int index(Context c) {
         // nothing chosen yet: on Android 12+ start with the phone's own palette so the app matches One UI from the first launch
         int def = android.os.Build.VERSION.SDK_INT >= 31 ? SYSTEM : 0;
-        return Math.max(0, Math.min(count() - 1, Store.prefs(c).getInt("accent", def)));
+        android.content.SharedPreferences p = Store.prefs(c);
+        int v;
+        if (p.contains("accent2")) v = p.getInt("accent2", def);
+        else if (p.contains("accent")) {         // the first nine-swatch list had the system accent at 8; it moved to 9
+            int old = p.getInt("accent", 0);
+            v = old == 8 ? SYSTEM : old;
+        } else v = def;
+        return Math.max(0, Math.min(count() - 1, v));
     }
 
     public static void set(Context c, int i) {
-        Store.prefs(c).edit().putInt("accent", i).apply();
+        Store.prefs(c).edit().putInt("accent2", i).apply();
     }
 
     /** Layers the chosen accent over an activity / context theme. */

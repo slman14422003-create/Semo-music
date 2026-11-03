@@ -40,4 +40,5 @@
     <color name="glass_pill_stroke">#14000000</color>
     <color name="glass_snap_tint">#A6FFFFFF</color>
     <color name="glass_sheet_tint">#D9FFFFFF</color>
+    <color name="splash_bg">#FF070A1C</color>
 </resources>

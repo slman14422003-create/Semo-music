@@ -84,7 +84,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         root.addView(bg, new FrameLayout.LayoutParams(-1, -1));
         ArtGlow glow = new ArtGlow(this);
         root.addView(glow, new FrameLayout.LayoutParams(-1, -1));
-        np.onTint = glow::setColor;
+        np.onTint = tintColor -> {
+            glow.setColor(tintColor);
+            if (lockHalo != null) lockHalo.setColor(tintColor);
+        };
         View scrim = new View(this);
         scrim.setBackgroundResource(R.drawable.bg_scrim);
         root.addView(scrim, new FrameLayout.LayoutParams(-1, -1));
@@ -92,7 +95,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setGravity(Gravity.CENTER_HORIZONTAL);
-        content.setPadding(Ui.dp(this, 24), Ui.dp(this, 8), Ui.dp(this, 24), Ui.dp(this, 6));
+        content.setPadding(Ui.dp(this, 24), Ui.dp(this, 14), Ui.dp(this, 24), Ui.dp(this, 6));
 
         // top: app chip + close
         LinearLayout top = new LinearLayout(this);
@@ -105,6 +108,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         ci.setImageResource(R.drawable.ic_music);
         Ui.tint(ci, R.color.text_primary);
         chip.addView(ci, Ui.lp(Ui.dp(this, 18), Ui.dp(this, 18)));
+        lockEq = new EqView(this);
+        LinearLayout.LayoutParams eqp = Ui.lp(Ui.dp(this, 15), Ui.dp(this, 13));
+        eqp.setMarginStart(Ui.dp(this, 8));
+        chip.addView(lockEq, eqp);
         TextView cn = Ui.text(this, getString(R.string.app_name), 13, R.color.text_primary);
         cn.setTypeface(Typeface.DEFAULT_BOLD);
         cn.setPaddingRelative(Ui.dp(this, 8), 0, 0, 0);
@@ -121,18 +128,19 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         TextClock time = new TextClock(this);
         time.setFormat12Hour("h:mm");
         time.setFormat24Hour("HH:mm");
-        time.setTextSize(60);
+        time.setTextSize(76);
         time.setIncludeFontPadding(false);
         time.setTextColor(Ui.color(this, R.color.text_primary));
         // the phone's own system font (One UI Sans, MiSans, Google Sans ...) in a light weight, like its own lock screen
-        time.setTypeface(Build.VERSION.SDK_INT >= 28 ? Typeface.create(Typeface.DEFAULT, 300, false)
+        time.setTypeface(Build.VERSION.SDK_INT >= 28 ? Typeface.create(Typeface.DEFAULT, 200, false)
                 : Typeface.create("sans-serif-light", Typeface.NORMAL));
         time.setGravity(Gravity.CENTER);
         TextClock date = new TextClock(this);
         String pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEEdMMMM");
         date.setFormat12Hour(pattern);
         date.setFormat24Hour(pattern);
-        date.setTextSize(15);
+        date.setTextSize(16);
+        date.setLetterSpacing(0.03f);
         date.setTextColor(Ui.color(this, R.color.text_secondary));
         date.setGravity(Gravity.CENTER);
         clockBox.addView(time, Ui.lp(-1, -2));
@@ -149,15 +157,23 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         // cover: biggest square that fits between the clock and the panel
         CoverBox cover = new CoverBox(this, 300);
         coverBox = cover;
-        cover.setPadding(0, Ui.dp(this, 14), 0, Ui.dp(this, 14));
+        cover.setPadding(0, Ui.dp(this, 18), 0, Ui.dp(this, 16));
+        lockHalo = new Halo(this);
+        cover.setHalo(lockHalo);
         cover.setCover(np.art);
+        np.onRefresh = () -> {
+            androidx.media3.session.MediaController mc = Pb.get();
+            boolean live = mc != null && mc.isPlaying();
+            lockEq.setAnimating(live);
+            lockHalo.setPlaying(live);
+        };
         content.addView(cover, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         // glass panel
         glass = new LinearLayout(this);
         glass.setOrientation(LinearLayout.VERTICAL);
-        glass.setBackgroundResource(R.drawable.bg_glass);
-        glass.setPadding(Ui.dp(this, 20), Ui.dp(this, 18), Ui.dp(this, 20), Ui.dp(this, 14));
+        glass.setBackgroundResource(R.drawable.bg_glass_deck);
+        glass.setPadding(Ui.dp(this, 22), Ui.dp(this, 20), Ui.dp(this, 22), Ui.dp(this, 12));
         glass.addView(np.info, Ui.lp(-1, -2));
         LinearLayout.LayoutParams sp = Ui.lp(-1, -2);
         sp.topMargin = Ui.dp(this, 10);
@@ -192,7 +208,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                 Math.min(getResources().getDisplayMetrics().widthPixels, Ui.dp(this, 520)), -1, Gravity.CENTER_HORIZONTAL));
         setContentView(root);
         Ui.edgeToEdge(this, content);
-        Ui.bars(this, true);       // the lock screen is always dark: white clock / battery icons, status bar always shown
+        Ui.bars(this, true);       // the lock screen is always dark: white clock / battery icons
+        hideStatusBar();           // the lock screen has its own clock: no system status bar on top of it
+        content.setClipChildren(false);
+        root.setClipChildren(false);
 
         np.artCb = u -> Backdrop.set(this, bg, Store.flag(this, "lock_blur", true) ? u : null, np.artPx());
         setupSwipe(root);
@@ -206,6 +225,26 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
             Ui.enter(glass, 170);
             Ui.enter(hint, 260);
         }
+    }
+
+    private EqView lockEq;
+    private Halo lockHalo;
+
+    private void hideStatusBar() {
+        try {
+            androidx.core.view.WindowInsetsControllerCompat ic =
+                    androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+            ic.setSystemBarsBehavior(androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            ic.hide(androidx.core.view.WindowInsetsCompat.Type.statusBars());
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("lock status bar", e);
+        }
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) hideStatusBar();
     }
 
     private TextView status;

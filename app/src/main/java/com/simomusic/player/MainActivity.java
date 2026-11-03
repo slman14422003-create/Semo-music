@@ -66,7 +66,9 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private FloatingNav nav;
     private View sortBtn;
     private int insetBottom, imeBottom;
-    private LinearLayout headerBar, selBar;
+    private LinearLayout headerBar, selBar, topOverlay, rootCol;
+    private LiveGlass topGlass;
+    private int insetTop;
     private TextView selCount;
     private androidx.swiperefreshlayout.widget.SwipeRefreshLayout srl;
     private androidx.activity.OnBackPressedCallback backCb;
@@ -194,20 +196,20 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         // ---- header: title + count, round buttons
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPaddingRelative(Ui.dp(this, 24), Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 4));
+        bar.setPaddingRelative(Ui.dp(this, 22), 0, Ui.dp(this, 10), 0);
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
-        final TextView title = Ui.text(this, getString(R.string.app_name), 32, R.color.text_primary);
+        final TextView title = Ui.text(this, getString(R.string.app_name), 24, R.color.text_primary);
         titleView = title;
         title.setTypeface(Ui.titleFace(true));
         title.setOnClickListener(v -> {
             if (rv != null) rv.smoothScrollToPosition(0);
         });
-        subtitle = Ui.text(this, "", 13, R.color.text_secondary);
+        subtitle = Ui.text(this, "", 12, R.color.text_secondary);
         titles.addView(title);
         titles.addView(subtitle);
         bar.addView(titles, Ui.weight(1));
-        sortBtn = Ui.icon(this, R.drawable.ic_sort, R.string.sort_by, v -> Menus.sort(this, () -> {
+        sortBtn = Ui.flat(this, R.drawable.ic_sort, 48, R.string.sort_by, v -> Menus.sort(this, () -> {
             animateNext = true;
             refresh();
         }));
@@ -217,10 +219,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             bar.addView(v);
         }
         headerBar = bar;
-        root.addView(bar);
         selBar = buildSelectionBar();
         selBar.setVisibility(View.GONE);
-        root.addView(selBar);
 
         search = Ui.searchEdit(this, getString(R.string.search_hint));
         search.setOnEditorActionListener((v, id, ev) -> {
@@ -242,13 +242,11 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                 searchHandler.postDelayed(searchRefresh, 150);
             }
         });
-        root.addView(search);
 
         banner = Ui.settingRow(this, R.drawable.ic_shield, getString(R.string.finish_setup), getString(R.string.finish_setup_sub),
                 null, false, v -> Ui.go(this, new Intent(this, SettingsActivity.class)));
         banner.setVisibility(View.GONE);
         Ui.shape(this, banner.findViewById(R.id.card), true, true, R.color.accent_soft);
-        root.addView(banner);
 
         // ---- list (the play-all pills are the list header, so everything scrolls together)
         songs = new TrackAdapter(this, this);
@@ -350,6 +348,31 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         stage.setBackgroundColor(Ui.color(this, R.color.bg));
         stage.addView(main, new FrameLayout.LayoutParams(-1, -1));
 
+        // the header is a glass capsule floating over the list (same material as the tab bar)
+        rootCol = root;
+        topOverlay = new LinearLayout(this);
+        topOverlay.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout capsule = new LinearLayout(this);
+        capsule.setOrientation(LinearLayout.VERTICAL);
+        FrameLayout headRow = new FrameLayout(this);
+        headRow.addView(headerBar, new FrameLayout.LayoutParams(-1, Ui.dp(this, 64)));
+        headRow.addView(selBar, new FrameLayout.LayoutParams(-1, Ui.dp(this, 64)));
+        capsule.addView(headRow, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams sfp = new LinearLayout.LayoutParams(-1, -2);
+        sfp.setMargins(Ui.dp(this, 12), 0, Ui.dp(this, 12), Ui.dp(this, 10));
+        capsule.addView(search, sfp);
+        topGlass = Glass.live(capsule, main, 28);
+        LinearLayout.LayoutParams cap = new LinearLayout.LayoutParams(-1, -2);
+        cap.setMargins(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
+        topOverlay.addView(capsule, cap);
+        LinearLayout.LayoutParams bnp = new LinearLayout.LayoutParams(-1, -2);
+        bnp.setMargins(Ui.dp(this, 16), Ui.dp(this, 6), Ui.dp(this, 16), 0);
+        topOverlay.addView(banner, bnp);
+        stage.addView(topOverlay, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
+        topOverlay.addOnLayoutChangeListener((vw, l1, t1, r1, b1, l2, t2, r2, b2) -> {
+            if (b1 - t1 != b2 - t2) applyTop();
+        });
+
         nav = new FloatingNav(this, main,
                 new int[]{R.drawable.ic_music, R.drawable.ic_list, R.drawable.ic_search, R.drawable.ic_settings},
                 new int[]{R.string.tab_songs, R.string.tab_playlists, R.string.search, R.string.settings});
@@ -374,6 +397,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         panel = new PlayerPanel(this, new PlayerPanel.Host() {
             @Override
             public void onCollapsed() {
+                topGlass.setPaused(false);
                 nav.glass().setPaused(false);
                 mini.glass().setPaused(false);
                 setMainLayer(false);
@@ -392,6 +416,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
             @Override
             public void onState(boolean expanded) {
+                topGlass.setPaused(expanded);
                 nav.glass().setPaused(expanded);
                 mini.glass().setPaused(expanded);
                 updateBack();
@@ -419,7 +444,26 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         applyDock();
     }
 
+    private void applyTop() {
+        if (topOverlay == null || rv == null) return;
+        int pad = topOverlay.getHeight() + Ui.dp(this, 8);
+        if (rv.getPaddingTop() != pad) rv.setPadding(0, pad, 0, rv.getPaddingBottom());
+        srl.setProgressViewOffset(false, pad - Ui.dp(this, 8), pad + Ui.dp(this, 48));
+        ViewGroup.LayoutParams sp = skeleton.getLayoutParams();
+        if (sp instanceof FrameLayout.LayoutParams && ((FrameLayout.LayoutParams) sp).topMargin != pad) {
+            ((FrameLayout.LayoutParams) sp).topMargin = pad;
+            skeleton.setLayoutParams(sp);
+        }
+    }
+
     private void applyDock() {
+        if (rootCol != null && rootCol.getPaddingTop() != 0) {
+            insetTop = rootCol.getPaddingTop();
+            rootCol.setPadding(rootCol.getPaddingLeft(), 0, rootCol.getPaddingRight(), rootCol.getPaddingBottom());
+        }
+        if (topOverlay != null && topOverlay.getPaddingTop() != insetTop + Ui.dp(this, 8)) {
+            topOverlay.setPadding(0, insetTop + Ui.dp(this, 8), 0, 0);
+        }
         if (nav == null || mini == null || rv == null) return;
         int navH = Ui.dp(this, 64), gap = Ui.dp(this, 10);
         int nb = insetBottom + Ui.dp(this, 8);
@@ -460,6 +504,8 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             search.setVisibility(View.VISIBLE);
             if (prev != 2) {
                 animateNext = true;
+                search.setAlpha(0f);
+                search.animate().alpha(1f).setDuration(Motion.BASE).start();
                 search.requestFocus();
                 search.postDelayed(() -> {
                     if (im != null && tab == 2) im.showSoftInput(search, 0);
@@ -664,7 +710,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private LinearLayout buildSelectionBar() {
         LinearLayout b = new LinearLayout(this);
         b.setGravity(Gravity.CENTER_VERTICAL);
-        b.setPaddingRelative(Ui.dp(this, 12), Ui.dp(this, 14), Ui.dp(this, 12), Ui.dp(this, 4));
+        b.setPaddingRelative(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
         b.addView(Ui.icon(this, R.drawable.ic_close, R.string.cancel, v -> exitSelect()));
         selCount = Ui.text(this, "", 20, R.color.text_primary);
         selCount.setTypeface(Ui.titleFace(false));

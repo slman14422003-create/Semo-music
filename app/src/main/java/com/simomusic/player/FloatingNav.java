@@ -1,5 +1,6 @@
 package com.simomusic.player;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -21,6 +22,10 @@ public final class FloatingNav extends FrameLayout {
     private final ImageView[] icons;
     private final TextView[] labels;
     private final LiveGlass glass;
+    private final View gap;
+    private int gapW;
+    private int gapTarget;
+    private ValueAnimator gapAnim;
     private Listener listener;
     private int sel = -1;
     private boolean placed;
@@ -46,8 +51,10 @@ public final class FloatingNav extends FrameLayout {
         items = new LinearLayout[n];
         icons = new ImageView[n];
         labels = new TextView[n];
+        gap = new View(c);
         for (int i = 0; i < n; i++) {
             final int idx = i;
+            if (i == n / 2) row.addView(gap, new LinearLayout.LayoutParams(0, -1));
             LinearLayout it = new LinearLayout(c);
             it.setOrientation(LinearLayout.VERTICAL);
             it.setGravity(Gravity.CENTER);
@@ -82,6 +89,31 @@ public final class FloatingNav extends FrameLayout {
         return glass;
     }
 
+    /** Room in the middle of the bar for the mini player circle; the tabs slide apart to make it. */
+    public void setGap(boolean on, boolean animate) {
+        int target = on ? Ui.dp(getContext(), 64) : 0;
+        if (target == gapTarget) return;
+        gapTarget = target;
+        if (gapAnim != null) gapAnim.cancel();
+        if (!animate || getWidth() == 0) {
+            applyGap(target);
+            return;
+        }
+        gapAnim = ValueAnimator.ofInt(gapW, target);
+        gapAnim.setDuration(Motion.BASE);
+        gapAnim.setInterpolator(Motion.ENTER);
+        gapAnim.addUpdateListener(a -> applyGap((int) a.getAnimatedValue()));
+        gapAnim.start();
+    }
+
+    private void applyGap(int w) {
+        gapW = w;
+        LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) gap.getLayoutParams();
+        lp.width = w;
+        gap.setLayoutParams(lp);
+        if (sel >= 0 && getWidth() > 0) place(sel, false);
+    }
+
     public void setListener(Listener l) {
         listener = l;
     }
@@ -109,7 +141,7 @@ public final class FloatingNav extends FrameLayout {
 
     private void place(int i, boolean animate) {
         Context c = getContext();
-        int inner = getWidth() - Ui.dp(c, 16);
+        int inner = getWidth() - Ui.dp(c, 16) - gapW;
         if (inner <= 0 || n == 0) return;
         int itemW = inner / n;
         LayoutParams lp = (LayoutParams) pill.getLayoutParams();
@@ -120,7 +152,7 @@ public final class FloatingNav extends FrameLayout {
         }
         boolean rtl = getLayoutDirection() == LAYOUT_DIRECTION_RTL;
         int slot = rtl ? n - 1 - i : i;
-        float x = Ui.dp(c, 8) + slot * itemW + Ui.dp(c, 2);
+        float x = Ui.dp(c, 8) + slot * itemW + (slot >= n / 2 ? gapW : 0) + Ui.dp(c, 2);
         pill.animate().cancel();
         if (animate && placed) {
             pill.animate().translationX(x).setDuration(Motion.BASE).setInterpolator(Motion.ENTER).start();

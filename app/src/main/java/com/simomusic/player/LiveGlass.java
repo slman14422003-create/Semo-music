@@ -102,7 +102,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     }
 
     private void update() {
-        if (failed || paused || Gest.busy) return;
+        if (failed || paused || alpha < 8 || Gest.busy) return;
         if (!owner.isShown() || owner.getAlpha() < 0.02f) return;
         if (source.getLayerType() != View.LAYER_TYPE_NONE) return;
         int w = owner.getWidth();
@@ -146,7 +146,9 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     @Override
     public void draw(@NonNull Canvas canvas) {
         Rect r = getBounds();
-        if (r.isEmpty()) return;
+        if (r.isEmpty() || alpha < 4) return;
+        strokePaint.setAlpha(alpha);
+        sheenPaint.setAlpha(alpha);
         if (bmp != null && !failed) {
             rect.set(r);
             bmpPaint.setAlpha(alpha);

@@ -11,10 +11,19 @@ import android.widget.FrameLayout;
  */
 public final class CoverBox extends FrameLayout {
     private final int maxPx;
+    private View halo;
 
     public CoverBox(Context c, int maxDp) {
         super(c);
         maxPx = Ui.dp(c, maxDp);
+        setClipChildren(false);
+        setClipToPadding(false);
+    }
+
+    /** A glow drawn behind the cover, 1.5 times its size, centred on it. */
+    public void setHalo(View v) {
+        halo = v;
+        addView(v, 0, new LayoutParams(-2, -2, Gravity.CENTER));
     }
 
     public void setCover(View v) {
@@ -29,7 +38,9 @@ public final class CoverBox extends FrameLayout {
         int h = getMeasuredHeight() - getPaddingTop() - getPaddingBottom();
         int s = Math.max(0, Math.min(Math.min(w, h), maxPx));
         for (int i = 0; i < getChildCount(); i++) {
-            getChildAt(i).measure(MeasureSpec.makeMeasureSpec(s, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(s, MeasureSpec.EXACTLY));
+            View ch = getChildAt(i);
+            int cs = ch == halo ? Math.round(s * 1.5f) : s;
+            ch.measure(MeasureSpec.makeMeasureSpec(cs, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(cs, MeasureSpec.EXACTLY));
         }
     }
 }

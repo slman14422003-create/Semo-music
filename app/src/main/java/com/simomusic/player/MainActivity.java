@@ -369,6 +369,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         });
         mini = new MiniPlayer(this, main);
         mini.setOnShown(this::applyDock);
+        mini.setOnExpand(this::applyDock);
         stage.addView(mini);
         panel = new PlayerPanel(this, new PlayerPanel.Host() {
             @Override
@@ -427,11 +428,12 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             nlp.bottomMargin = nb;
             nav.setLayoutParams(nlp);
         }
-        int miniBottom = nb + navH + gap;
-        mini.setDock(miniBottom, getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 24));
+        int navTop = nb + navH + gap;
+        mini.setDock(nb + (navH - Ui.dp(this, 56)) / 2, navTop, getResources().getDisplayMetrics().widthPixels - Ui.dp(this, 32));
         boolean kb = imeBottom > insetBottom + Ui.dp(this, 80);
         boolean miniOn = mini.getVisibility() == View.VISIBLE;
-        int pad = kb ? imeBottom + Ui.dp(this, 8) : miniBottom + (miniOn ? Ui.dp(this, 56) + gap : 0);
+        nav.setGap(miniOn && !mini.isExpanded(), true);
+        int pad = kb ? imeBottom + Ui.dp(this, 8) : navTop;
         if (rv.getPaddingBottom() != pad) rv.setPadding(0, rv.getPaddingTop(), 0, pad);
     }
 
@@ -449,6 +451,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         int prev = tab;
         tab = t;
         if (nav != null) nav.select(t, true);
+        if (mini != null) mini.collapse();
         titleView.setText(t == 0 ? R.string.app_name : t == 1 ? R.string.tab_playlists : R.string.search);
         sortBtn.setVisibility(t == 0 ? View.VISIBLE : View.INVISIBLE);
         android.view.inputmethod.InputMethodManager im =

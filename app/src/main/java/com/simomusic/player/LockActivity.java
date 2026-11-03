@@ -38,6 +38,16 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         @Override
         public void onReceive(Context c, Intent i) {
             LockLauncher.lastSeen = android.os.SystemClock.elapsedRealtime();
+            String a = i.getAction();
+            if (Intent.ACTION_SCREEN_OFF.equals(a)) return;   // stay alive: no close / reopen flicker when the screen wakes again
+            if (Intent.ACTION_SCREEN_ON.equals(a)) {
+                // woke up without a keyguard (e.g. unlocked while off): leave, otherwise stay above the lock screen
+                clockH.postDelayed(() -> {
+                    KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+                    if (km != null && !km.isKeyguardLocked() && !isFinishing()) finish();
+                }, 900);
+                return;
+            }
             finish();
         }
     };
@@ -217,6 +227,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         setupSwipe(root);
         IntentFilter f = new IntentFilter(Intent.ACTION_USER_PRESENT);
         f.addAction(Intent.ACTION_SCREEN_OFF);
+        f.addAction(Intent.ACTION_SCREEN_ON);
         ContextCompat.registerReceiver(this, closer, f, ContextCompat.RECEIVER_NOT_EXPORTED);
 
         if (animationsOn()) {
@@ -459,6 +470,16 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
     public void finish() {
         super.finish();
         Ui.legacyClose(this, R.anim.fade_in, R.anim.fade_out);
+    }
+
+    /** Launched again while already alive (screen woke up): just refresh, no second copy and no flicker. */
+    @Override
+    protected void onNewIntent(Intent i) {
+        super.onNewIntent(i);
+        setIntent(i);
+        LockLauncher.clear(this);
+        if (Build.VERSION.SDK_INT >= 27) setTurnScreenOn(true);
+        if (np != null) np.start();
     }
 
     @Override

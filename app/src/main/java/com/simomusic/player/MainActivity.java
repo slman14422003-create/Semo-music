@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     private PlayerPanel panel;
     private FrameLayout mainCol;
     private FloatingNav nav;
-    private View sortBtn;
+    private View sortBtn, playBtn, shuffleBtn;
     private int insetBottom, imeBottom;
     private LinearLayout headerBar, selBar, topOverlay, rootCol;
     private LiveGlass topGlass;
@@ -213,7 +213,13 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             animateNext = true;
             refresh();
         }));
-        View[] btns = {sortBtn};
+        // small Play all / Shuffle buttons live inside the capsule, next to the sort button
+        playBtn = Ui.flat(this, R.drawable.ic_play, 40, R.string.play_all, v -> playAll(false));
+        playBtn.setBackgroundResource(R.drawable.btn_primary);
+        Ui.tint((ImageView) playBtn, R.color.on_accent);
+        shuffleBtn = Ui.flat(this, R.drawable.ic_shuffle, 40, R.string.shuffle_all, v -> playAll(true));
+        shuffleBtn.setBackgroundResource(R.drawable.btn_secondary);
+        View[] btns = {playBtn, shuffleBtn, sortBtn};
         for (View v : btns) {
             ((LinearLayout.LayoutParams) v.getLayoutParams()).setMarginStart(Ui.dp(this, 8));
             bar.addView(v);
@@ -250,9 +256,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
         // ---- list (the play-all pills are the list header, so everything scrolls together)
         songs = new TrackAdapter(this, this);
-        actions = Ui.pillRow(this,
-                Ui.pill(this, R.string.play_all, R.drawable.ic_play, true, v -> playAll(false)),
-                Ui.pill(this, R.string.shuffle_all, R.drawable.ic_shuffle, false, v -> playAll(true)));
+        actions = null;   // Play all / Shuffle moved into the header capsule (see playBtn / shuffleBtn)
         FrameLayout body = new FrameLayout(this);
         rv = new RecyclerView(this);
         rv.setLayoutManager(new LinearLayoutManager(this));
@@ -498,6 +502,10 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         if (mini != null) mini.collapse();
         titleView.setText(t == 0 ? R.string.app_name : t == 1 ? R.string.tab_playlists : R.string.search);
         sortBtn.setVisibility(t == 0 ? View.VISIBLE : View.INVISIBLE);
+        if (playBtn != null) {
+            playBtn.setVisibility(t == 0 ? View.VISIBLE : View.GONE);
+            shuffleBtn.setVisibility(t == 0 ? View.VISIBLE : View.GONE);
+        }
         android.view.inputmethod.InputMethodManager im =
                 (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
         if (t == 2) {
@@ -592,7 +600,10 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             listMode = mode;
             rv.invalidateItemDecorations();
         }
-        songs.header = all.isEmpty() || tab == 2 ? null : actions;
+        songs.header = null;
+        int vis = all.isEmpty() || tab != 0 ? View.GONE : View.VISIBLE;
+        playBtn.setVisibility(vis);
+        shuffleBtn.setVisibility(vis);
         songs.setData(all, animateNext);
         songs.setCurrent(Pb.currentId());
         if (songs.select) syncSelection(all);
@@ -672,12 +683,16 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
 
     @Override
     protected void onStop() {
-        Pb.remove(current);
-        Library.removeListener(libChanged);
-        searchHandler.removeCallbacks(searchRefresh);
-        mini.stop();
-        pulse.cancel();          // no animator keeps running while the app is in the background
-        panel.onHostStop();
+        try {
+            Pb.remove(current);
+            Library.removeListener(libChanged);
+            searchHandler.removeCallbacks(searchRefresh);
+            if (mini != null) mini.stop();
+            if (pulse != null) pulse.cancel();          // no animator keeps running while the app is in the background
+            if (panel != null) panel.onHostStop();
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("main stop", e);
+        }
         super.onStop();
     }
 

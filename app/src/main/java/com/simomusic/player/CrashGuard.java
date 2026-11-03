@@ -36,9 +36,21 @@ public final class CrashGuard {
                 Store.prefs(a).edit().putBoolean("crash_unseen", true).commit();
             } catch (Throwable ignored) {
             }
+            // a failed background worker (covers, lyrics, scans, network) is logged and survived: only the main thread
+            // and the player's own threads are fatal, so the app no longer closes by itself because of a side task
+            if (!fatalThread(t)) {
+                Log.w("SimoMusic", "survived crash on " + t.getName(), e);
+                return;
+            }
             if (prev != null) prev.uncaughtException(t, e);
             else System.exit(2);
         });
+    }
+
+    private static boolean fatalThread(Thread t) {
+        if (t == null || t == android.os.Looper.getMainLooper().getThread()) return true;
+        String n = t.getName() == null ? "" : t.getName();
+        return n.contains("ExoPlayer") || n.contains("Playback") || n.contains("Media") || n.contains("main");
     }
 
     /** A problem the app recovered from by itself: logged, the app keeps running. */

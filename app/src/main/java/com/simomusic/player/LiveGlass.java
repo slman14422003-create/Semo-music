@@ -35,7 +35,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         public void run() {
             if (vto == null) return;
             owner.invalidate();
-            owner.postDelayed(this, 160);
+            owner.postDelayed(this, 400);
         }
     };
     private final int bgColor;
@@ -67,7 +67,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         float d = c.getResources().getDisplayMetrics().density;
         radius = radiusDp * d;
         stroke = Math.max(1f, d);
-        ds = Math.max(4, Math.round(d * 2.6f));
+        ds = Math.max(6, Math.round(d * 3.4f));
         blurR = 4;
         bgColor = Ui.color(c, R.color.bg);
         hi = Ui.color(c, R.color.glass_hi);
@@ -115,7 +115,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     public void onViewAttachedToWindow(@NonNull View v) {
         vto = owner.getViewTreeObserver();
         if (vto.isAlive()) vto.addOnPreDrawListener(this);
-        if (ticking) owner.postDelayed(ticker, 160);
+        if (ticking) owner.postDelayed(ticker, 400);
     }
 
     @Override
@@ -139,7 +139,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         int h = owner.getHeight();
         if (w <= 0 || h <= 0 || source.getWidth() <= 0) return;
         long now = SystemClock.uptimeMillis();
-        if (now - last < (now < Glass.hotUntil ? 8 : 50)) return;
+        if (now - last < (now < Glass.hotUntil ? 33 : 110)) return;
         last = now;
         try {
             int bw = Math.max(2, (w + ds - 1) / ds);

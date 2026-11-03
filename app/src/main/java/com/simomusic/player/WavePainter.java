@@ -57,7 +57,7 @@ final class WavePainter {
     /** One UI media-card style: thick rounded track, round ring thumb with a soft glow, a small drifting wave over the played part. */
     private void drawFlat(Canvas cv, View v, float shown, float dt) {
         float h = stroke * 1.9f;
-        float rad = Math.max(thumbH * 0.55f, h * 1.25f) * (dragging ? 1.12f : 1f);
+        float rad = h * 0.95f * (dragging ? 1.15f : 1f);
         float left = v.getPaddingLeft() + h / 2f;
         float right = v.getWidth() - v.getPaddingRight() - h / 2f;
         float cy = v.getHeight() / 2f;
@@ -92,12 +92,12 @@ final class WavePainter {
         }
         // thumb: glow, white ring, accent core
         glow.setColor(played.getColor());
-        glow.setAlpha(dragging ? 90 : 55);
-        cv.drawCircle(px, cy, rad * 1.7f, glow);
+        glow.setAlpha(dragging ? 80 : 40);
+        cv.drawCircle(px, cy, rad * 1.45f, glow);
         boolean light = androidx.core.graphics.ColorUtils.calculateLuminance(played.getColor()) > 0.7;
         ring.setColor(light ? played.getColor() : 0xFFFFFFFF);
         cv.drawCircle(px, cy, rad, ring);
-        cv.drawCircle(px, cy, rad - Math.max(Ui.dp(v.getContext(), 3), rad * 0.26f), light ? inner : thumb);
+        cv.drawCircle(px, cy, rad - Math.max(Ui.dp(v.getContext(), 2), rad * 0.3f), light ? inner : thumb);
     }
 
     void waving(boolean on) {

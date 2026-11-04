@@ -42,4 +42,5 @@
     <color name="glass_sheet_tint">#D9FFFFFF</color>
     <color name="splash_bg">#FFFFFFFF</color>
     <color name="splash_fg">#FF0B0B10</color>
+    <color name="switch_off">#D1D1D6</color>
 </resources>

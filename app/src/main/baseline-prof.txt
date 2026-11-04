@@ -1,6 +1,26 @@
-# Baseline profile: precompile this app's own code at install time so the first launch and the first scrolls are smooth.
-HSPLcom/simomusic/player/**->**(**)**
-HSPLcom/simomusic/player/**-><init>(**)V
-Landroidx/recyclerview/widget/**;
-HSPLandroidx/recyclerview/widget/**->**(**)**
-HSPLandroidx/appcompat/widget/**->**(**)**
+# Baseline Profile مركّز على مسار الإقلاع والواجهة والأداء فقط (بدل كل كود التطبيق).
+# لتوليد ملف حقيقي من تشغيل فعلي استخدم Macrobenchmark (BaselineProfileRule) على جهاز.
+HSPLcom/shopmanager/app/MainActivity;->**(**)**
+HSPLcom/shopmanager/app/ShopManagerApplication;->**(**)**
+HSPLcom/shopmanager/app/data/performance/**;->**(**)**
+HSPLcom/shopmanager/app/ui/common/**;->**(**)**
+HSPLcom/shopmanager/app/ui/dashboard/**;->**(**)**
+HSPLcom/shopmanager/app/ui/debts/**;->**(**)**
+HSPLcom/shopmanager/app/ui/materials/**;->**(**)**
+HSPLcom/shopmanager/app/ui/splash/**;->**(**)**
+HSPLcom/shopmanager/app/ui/theme/**;->**(**)**
+Lcom/shopmanager/app/MainActivity;
+Lcom/shopmanager/app/data/performance/**;
+Lcom/shopmanager/app/ui/common/**;
+HSPLcom/shopmanager/app/ui/notes/**;->**(**)**
+HSPLcom/shopmanager/app/ui/settings/**;->**(**)**
+HSPLcom/shopmanager/app/ui/lock/**;->**(**)**
+HSPLcom/shopmanager/app/data/debts/**;->**(**)**
+HSPLcom/shopmanager/app/data/materials/**;->**(**)**
+HSPLcom/shopmanager/app/data/notes/**;->**(**)**
+HSPLcom/shopmanager/app/data/settings/**;->**(**)**
+Lcom/shopmanager/app/ui/dashboard/**;
+Lcom/shopmanager/app/ui/debts/**;
+Lcom/shopmanager/app/ui/materials/**;
+Lcom/shopmanager/app/ui/notes/**;
+Lcom/shopmanager/app/ui/theme/**;

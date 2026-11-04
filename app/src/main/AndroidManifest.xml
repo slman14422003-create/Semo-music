@@ -1,367 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Optional hardware: the app still installs on devices without them -->
-    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- FEATURE ADDED ("حسن عمل التطبيق في الخلفية بشكل مخفي"): lets the app
+         ask the OS, once, to stop freezing its WorkManager jobs
+         (BackgroundSyncWorker / NoteReminderWorker) when it decides the app
+         is "idle" - see BatteryOptimizationHelper for the one-time,
+         no-nagging prompt this enables. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- In-app self-update (Settings → التحديثات): lets the system
+         installer be launched directly from this app for the APK it just
+         downloaded itself, instead of sending the person to an external
+         browser/file manager. On API 26+ the person still has to flip a
+         one-time "السماح من هذا المصدر" toggle for this app specifically
+         (see ApkDownloader.canInstallPackages) — this permission alone
+         doesn't silently install anything. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- المزامنة الفورية بالخلفية (RealtimeSyncService): خدمة أمامية من نوع
+         specialUse تُبقي مستمعات Firestore حيّة والتطبيق مغلق، وBootReceiver
+         يعيد تشغيلها بعد إعادة تشغيل الجهاز أو تحديث التطبيق. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- FEATURE ADDED (تحميل التحديث بالخلفية، UpdateDownloadService): مطلوبة
+         على أندرويد 14+ (API 34) لأي خدمة أمامية بنوع dataSync — وهو النوع
+         الصحيح هنا لأنه تحميل ملف فعلي، بعكس specialUse أعلاه المخصص
+         لمزامنة Firestore. بدونها ترفض الأنظمة الحديثة بدء الخدمة أصلاً. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+      FEATURE ADDED (package visibility, Android 11+/API 30+): declares the
+      two implicit ACTION_VIEW intents this app ever fires at another app —
+      installing the self-downloaded update APK (ApkDownloader.install) and
+      handing off an external http/https link tapped inside the help/
+      privacy in-app browser (WebViewScreen) to the system browser. Both
+      targets (the package installer, the default browser) are already on
+      Android's own automatic-visibility allowlist and worked without this
+      even before — this makes that visibility explicit and future-proof
+      instead of silently depending on an OS default that could vary by
+      OEM/ROM, and is the pattern Play Console itself recommends for an
+      app that installs its own updates.
+    -->
+    <!-- FEATURE ADDED (توافق أوسع مع الأجهزة، لا يؤثر على الهواتف): يصرّح
+         صراحة أن التطبيق لا يحتاج شاشة لمس فعلياً — بدونها يستبعد متجر Play
+         تلقائياً أي جهاز بلا لمس (كروم بوك، بعض التابلت مع فأرة/لوحة مفاتيح
+         فقط) من رؤية التطبيق أصلاً، رغم أن واجهته تعمل بشكل طبيعي بالنقر. -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
-    <!-- Read the music library (Android 13+: READ_MEDIA_AUDIO; older: classic storage permission) -->
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    <uses-permission
-        android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
-
-    <!-- Deleting a song on Android 9 and older (Android 10+ asks through the system dialog instead) -->
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
-
-    <!-- Audio routing to the headset, haptic feedback, and streaming https links opened from other apps -->
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-
-    <!-- Background playback: foreground service of type mediaPlayback (required on Android 14-16) -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-
-    <!-- Media notification + lock-screen controls (runtime permission on Android 13+) -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Lets the lock-screen player appear over the keyguard (special access on Android 14+) -->
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-
-    <!-- Bluetooth headset / car buttons and metadata (runtime permission on Android 12+) -->
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-
-    <!-- Lets the lock-screen player open itself when Android would block a background launch (user-granted) -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-
-    <!-- Special access, user-granted: lets "Set as ringtone" write the system ringtone setting -->
-    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
-
-    <!-- In-app updates: hand the downloaded apk to the system installer -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-
-    <!-- Keeps playback alive on aggressive battery managers (optional, user-granted) -->
-    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
-    <!-- Android 11+ package visibility: the intents this app resolves or launches -->
     <queries>
         <intent>
-            <action android:name="app.semo.ECOSYSTEM" />
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
         </intent>
         <intent>
             <action android:name="android.intent.action.VIEW" />
-            <data android:mimeType="audio/*" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SEND" />
-            <data android:mimeType="audio/*" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.SEND" />
-            <data android:mimeType="text/plain" />
-        </intent>
-        <intent>
-            <action android:name="android.settings.BLUETOOTH_SETTINGS" />
-        </intent>
-        <intent>
-            <action android:name="android.settings.MANAGE_DEFAULT_APPS_SETTINGS" />
+            <category android:name="android.intent.category.BROWSABLE" />
+            <data android:scheme="https" />
         </intent>
     </queries>
 
+    <!--
+      enableOnBackInvokedCallback="false" (تحت): نظام الـpredictive-back الخاص
+      بالنظام مُطفأ عمداً. لو كان مفعّلاً لعرض أندرويد معاينته الافتراضية فوق
+      أي سحبة من الحافة بدل حركة الرجوع المنسّقة في MainActivity
+      (`popEnterTransition`/`popExitTransition` = عكس حركة الدخول تماماً)،
+      فيصير الرجوع (سحبة أو زر) دائماً بحركة واحدة ثابتة.
+    -->
     <application
-        android:name=".App"
-        android:largeHeap="true"
-        android:resizeableActivity="true"
+        android:name=".ShopManagerApplication"
         android:allowBackup="true"
-        android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
-        android:enableOnBackInvokedCallback="true"
-        android:localeConfig="@xml/locales_config"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/Theme.ShopManager"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:usesCleartextTraffic="false"
+        android:enableOnBackInvokedCallback="false">
 
-        <!-- Semo ecosystem: what this app is, so the other Semo apps can find and use it -->
-        <meta-data android:name="app.semo.ROLE" android:value="music" />
+        <!--
+          FEATURE ADDED (privacy — ties directly into "سياسة الخصوصية": "لا
+          يحتوي على إعلانات أو أدوات تتبع"): WebView itself can otherwise
+          collect and send anonymous usage metrics for every WebView in the
+          app, independent of anything the app's own code does — this is
+          the documented AndroidX/AOSP switch to opt every WebView instance
+          (the help/privacy pages) out of that collection app-wide.
+        -->
+        <meta-data
+            android:name="android.webkit.WebView.MetricsOptOut"
+            android:value="true" />
 
-
-        <activity
-            android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density"
-            android:exported="true"
-            android:theme="@style/Theme.App.Starting">
-            <intent-filter>
-                <action android:name="app.semo.ECOSYSTEM" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <!-- "Music" app picker (CATEGORY_APP_MUSIC) and the old MUSIC_PLAYER action -->
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.APP_MUSIC" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.MUSIC_PLAYER" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <!-- Launcher entries: exactly one is enabled at a time (Settings > App icon switches them) -->
-        <activity-alias
-            android:name=".IconBlue"
-            android:enabled="true"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconViolet"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_violet"
-            android:roundIcon="@mipmap/ic_launcher_violet"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconGreen"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_green"
-            android:roundIcon="@mipmap/ic_launcher_green"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconPink"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_pink"
-            android:roundIcon="@mipmap/ic_launcher_pink"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconRed"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_red"
-            android:roundIcon="@mipmap/ic_launcher_red"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconOrange"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_orange"
-            android:roundIcon="@mipmap/ic_launcher_orange"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconGold"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_gold"
-            android:roundIcon="@mipmap/ic_launcher_gold"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconMidnight"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_midnight"
-            android:roundIcon="@mipmap/ic_launcher_midnight"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".IconCharcoal"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_charcoal"
-            android:roundIcon="@mipmap/ic_launcher_charcoal"
-            android:label="@string/app_name"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
-
-        <!-- Open-with / share / voice search: audio files from file managers, chats, browsers -->
-        <activity
-            android:name=".OpenActivity"
-            android:exported="true"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@style/Theme.App.Transparent">
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="audio/*" />
-                <data android:mimeType="application/ogg" />
-                <data android:mimeType="application/x-ogg" />
-                <data android:mimeType="application/itunes" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" />
-                <data android:scheme="http" />
-                <data android:mimeType="audio/*" />
-                <data android:mimeType="application/ogg" />
-            </intent-filter>
-            <!-- files that come without a type: recognised by their extension -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" />
-                <data android:scheme="file" />
-                <data android:mimeType="*/*" />
-                <data android:host="*" />
-                <data android:pathPattern=".*\\.mp3" />
-                <data android:pathPattern=".*\\.m4a" />
-                <data android:pathPattern=".*\\.flac" />
-                <data android:pathPattern=".*\\.ogg" />
-                <data android:pathPattern=".*\\.opus" />
-                <data android:pathPattern=".*\\.wav" />
-                <data android:pathPattern=".*\\.aac" />
-                <data android:pathPattern=".*\\.amr" />
-                <data android:pathPattern=".*\\.mka" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="audio/*" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <!-- Deletes a song through the system's own permission prompt; no screen -->
-        <activity
-            android:name=".DeleteActivity"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|uiMode|layoutDirection|locale"
+        <!--
+          PERF FIX (startup jitter): androidx.work auto-registers a
+          ContentProvider (WorkManagerInitializer) that runs before
+          Application.onCreate on EVERY cold start, unconditionally, the
+          moment the work-runtime-ktx dependency exists in the app —
+          whether or not a worker is ever scheduled yet. That provider
+          builds WorkManager's Room database on the spot, on the main
+          thread. On a fast phone that's invisible; on a slow eMMC/2GB
+          device it's real main-thread time competing with the very
+          first Compose frames — exactly what shows up as the app
+          "shaking" for the first couple of seconds. Removing this
+          default initializer moves that same setup to run lazily
+          instead (see ShopManagerApplication + MainActivity, where it
+          now happens off the main thread, after the splash screen is
+          already covering the UI).
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
-            android:excludeFromRecents="true"
-            android:noHistory="true"
-            android:theme="@style/Theme.App.Transparent" />
-        <!-- Sets a song as the ringtone through the system's own permission prompts; no screen of its own -->
-        <activity
-            android:name=".RingtoneActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:theme="@style/Theme.App.Transparent" />
-        <activity
-            android:name=".PlayerActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density|uiMode"
-            android:exported="false"
-            android:theme="@style/Theme.App.Player" />
-        <activity
-            android:name=".LyricsActivity"
-            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|navigation|density|uiMode"
-            android:exported="false" />
-        <activity android:name=".PlaylistActivity" android:exported="false" />
-        <activity android:name=".PickSongsActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".SettingsActivity" android:exported="false" />
-        <activity android:name=".IconActivity" android:exported="false" />
-
-        <!-- Lock-screen player: above the keyguard, own task, portrait on phones, never in recents -->
-        <activity
-            android:name=".LockActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:launchMode="singleTask"
-            android:screenOrientation="portrait"
-            android:showWhenLocked="true"
-            android:taskAffinity=""
-            android:turnScreenOn="true"
-            android:theme="@style/AppTheme" />
-
-        <!-- keeps the in-app language choice across restarts on Android 12 and older -->
-        <service
-            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
-            android:enabled="false"
-            android:exported="false">
+            tools:node="merge">
             <meta-data
-                android:name="autoStoreLocales"
-                android:value="true" />
-        </service>
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
 
-        <service
-            android:name=".PlayerService"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback">
-            <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
-            </intent-filter>
-        </service>
-
-        <!-- home-screen widget: title, artist, previous / play-pause / next -->
-        <receiver
-            android:name=".PlayerWidget"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/widget_player_info" />
-        </receiver>
-
-        <!-- shares the downloaded update apk with the system installer -->
+        <!--
+          Used by MaterialsReportImage to share the generated PNG report
+          image (see the "مشاركة" button on the materials screen) - lets
+          the share-sheet target app read the file from our cache dir
+          without exposing any other app storage.
+        -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -372,13 +139,77 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Headset / Bluetooth media buttons can resume playback even after the app was swiped away -->
+        <!--
+          "إشعارات أكثر تطورًا وكفاءة": يستقبل أزرار الإجراءات الملحقة
+          بإشعارات NotificationHelper (تأجيل تذكير، تجاهل قائمة المشتريات)
+          وينفّذها مباشرة دون فتح التطبيق. exported="false" لأن كل
+          PendingIntent موجّه لهذا المستقبل يُبنى داخل التطبيق نفسه (انظر
+          NotificationHelper.buildActionIntent) — لا شيء خارجي يستطيع
+          استدعاءه.
+        -->
         <receiver
-            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:name=".data.notifications.NotificationActionReceiver"
+            android:exported="false" />
+
+        <!--
+          المزامنة الفورية: خدمة أمامية تُبقي اتصال Firestore حيّاً فيصل إشعار
+          الديون/المواد/الملاحظات لحظة حدوثه حتى والتطبيق مغلق (WorkManager وحده
+          يتأجّل ساعات بسبب Doze وحماية البطارية). specialUse بلا مهلة 6 ساعات
+          الخاصة بـ dataSync على أندرويد 15+. للمستخدم مفتاح لإيقافها من الإعدادات.
+        -->
+        <service
+            android:name=".data.notifications.RealtimeSyncService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps a Firestore listener alive to deliver shop debt, stock and note notifications from other devices in real time" />
+        </service>
+
+        <!--
+          FEATURE ADDED ("والتحميل يكون في الخلفية"): خدمة أمامية من نوع
+          dataSync تُنزّل ملف APK التحديث بنفسها — انظر UpdateDownloadService
+          وUpdateDownloadState لسبب نقل هذا من كود Compose (كان يتوقف فور
+          مغادرة الشاشة) إلى هنا. exported="false" لأنها تُشغَّل فقط من
+          داخل التطبيق نفسه (UpdateDownloadService.start).
+        -->
+        <service
+            android:name=".data.updates.UpdateDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <!-- يعيد تشغيل الخدمة بعد الإقلاع/تحديث التطبيق. بثّان محميان من النظام. -->
+        <receiver
+            android:name=".data.notifications.BootReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.ShopManager.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <receiver
+            android:name=".widget.ShopWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/shop_widget_info" />
         </receiver>
     </application>
 </manifest>

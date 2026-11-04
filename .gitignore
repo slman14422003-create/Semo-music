@@ -1,15 +1,39 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
-/.idea
+.idea/
+.DS_Store
 /build
 /app/build
-.DS_Store
-# Release signing secrets: never commit these
-keystore.properties
+/captures
+.externalNativeBuild
+.cxx
+
+# Play Store release signing key — never commit this. Losing it means
+# this app can never be updated on the Play Store again under the same
+# listing; leaking it means anyone who has it can publish updates that
+# look like they come from you. Back the whole keystore/ folder up
+# somewhere private and durable (a password manager, an encrypted drive)
+# outside of git.
+/keystore/*.jks
+/keystore/*.properties.local
+
+# SECURITY (إضافة): أي ملف مفتاح توقيع أو أسرار بأي مكان بالمشروع، مو بس
+# داخل keystore/. (كان الاستثناء السابق يغطي مجلد keystore/ فقط، فنسخة
+# مفتاح محطوطة بمكان ثاني بالغلط كانت بتنرفع للمستودع.)
 *.jks
 *.keystore
 *.p12
-signing/
-/.cxx
-/captures
+*.pem
+*.key
+keystore.properties
+*.properties.local
+google-services.json
+service-account*.json
+
+# مخرجات البناء/الفحص المحلية
+*.apk
+*.aab
+*.hprof
+.kotlin/
+/app/release/

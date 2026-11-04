@@ -127,8 +127,12 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         cn.setPaddingRelative(Ui.dp(this, 8), 0, 0, 0);
         chip.addView(cn);
         top.addView(chip);
+        final float side = getResources().getConfiguration().getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? -1f : 1f;
+        chip.setTranslationX(side * Ui.dp(this, 14));   // nudged right
         top.addView(Ui.space(this, 1f), new LinearLayout.LayoutParams(1, 1, 1f));
-        top.addView(Ui.icon(this, R.drawable.ic_close, R.string.close, v -> finish()));
+        View closeBtn = Ui.icon(this, R.drawable.ic_close, R.string.close, v -> finish());
+        closeBtn.setTranslationX(side * Ui.dp(this, 10));   // nudged right as well
+        top.addView(closeBtn);
         topRow = top;
         content.addView(top, Ui.lp(-1, -2));
 

@@ -1,14 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  Exposes only the app's own cache/shared_images subfolder to other apps via
-  FileProvider - used by MaterialsReportImage to hand the generated PNG
-  report to the share sheet without granting access to the rest of the
-  app's storage.
--->
-<paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <cache-path name="shared_images" path="shared_images/" />
-    <!-- Downloaded update APK (see data/updates/ApkDownloader.kt) — handed
-         to the system package installer as a content:// URI through this
-         same FileProvider, same pattern as shared_images above. -->
+<paths>
+    <!-- the downloaded update apk (see Updater) -->
     <cache-path name="updates" path="updates/" />
 </paths>

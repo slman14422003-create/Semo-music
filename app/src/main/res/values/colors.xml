@@ -1,18 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ألوان تُرسم قبل تشغيل أي كود Compose (السبلاش، خلفية النافذة، الريبل)
-         فلا يمكنها الرجوع إلى Color.kt؛ لذلك تُكرَّر هنا بالقيم نفسها.
-         اللون الأساسي هو ClaudeOrangeLight في ui/theme/Color.kt. -->
-    <color name="background_light">#FFFFFF</color>
-
-    <!-- Ripple / touch-feedback tint and scroll edge-glow color. -->
-    <color name="ripple_brand">#1FC96442</color>
-    <color name="edge_glow_brand">#C96442</color>
-
-    <!-- Splash follows system light/dark theme (white here, pure black in
-         values-night/colors.xml). -->
-    <color name="splash_background">#FFFFFF</color>
-    <color name="widget_background">#F3F3F5</color>
-    <color name="widget_text">#0D0D0D</color>
-    <color name="widget_text_secondary">#5C5C5C</color>
-    <color name="widget_accent">#A94E2E</color>
+    <!-- Light theme (follows the system). Dark colors live in values-night/colors.xml -->
+    <color name="bg">#F4F5F9</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_high">#E8EAF1</color>
+    <color name="field">#EEF0F6</color>
+    <color name="stroke">#D3D7E2</color>
+    <color name="stroke_soft">#E4E7EF</color>
+    <color name="text_primary">#0A0A0F</color>
+    <color name="text_secondary">#4A4A55</color>
+    <color name="text_hint">#70707C</color>
+    <color name="accent">#2F5BE8</color>
+    <color name="accent_text">#2147C7</color>
+    <color name="accent_soft">#E2E9FF</color>
+    <color name="neutral_soft">#E9ECF3</color>
+    <!-- main capsule (play, selected tab, selected chip): dark pill with light text -->
+    <color name="pill_primary">#0A0A0F</color>
+    <color name="on_accent">#FFFFFF</color>
+    <color name="accent_glow">#1F2F5BE8</color>
+    <color name="row_stroke">#12000000</color>
+    <color name="ripple">#1F000000</color>
+    <color name="ripple_on_accent">#33FFFFFF</color>
+    <color name="ok">#1E9E55</color>
+    <color name="bad">#D93636</color>
+    <color name="info">#2F6FD6</color>
+    <color name="ic_launcher_bg">#FFF1F3F7</color>
+    <!-- Glass tokens (light) -->
+    <color name="glass_btn">#99FFFFFF</color>
+    <color name="glass_btn_stroke">#1A000000</color>
+    <color name="glass_row">#B3FFFFFF</color>
+    <color name="glass_sheet">#F2F7F8FC</color>
+    <color name="glass_sheet_stroke">#1F000000</color>
+    <color name="glass_field">#80FFFFFF</color>
+    <color name="glass_nav_tint">#80FFFFFF</color>
+    <color name="glass_hi">#D9FFFFFF</color>
+    <color name="glass_lo">#26000000</color>
+    <color name="glass_sheen">#59FFFFFF</color>
+    <color name="glass_pill">#14000000</color>
+    <color name="glass_pill_stroke">#14000000</color>
+    <color name="glass_snap_tint">#A6FFFFFF</color>
+    <color name="glass_sheet_tint">#D9FFFFFF</color>
+    <color name="splash_bg">#FF070A1C</color>
 </resources>

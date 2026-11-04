@@ -1,2 +1,0 @@
--dontwarn android.renderscript.**
--keep class eightbitlab.com.blurview.** { *; }

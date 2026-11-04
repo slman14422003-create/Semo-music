@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:drawable="@drawable/ic_splash_vec">
-    <target android:name="pop" android:animation="@animator/splash_pop" />
-    <target android:name="t1" android:animation="@animator/splash_trim" />
     <target android:name="s1" android:animation="@animator/splash_trim" />
-    <target android:name="s2" android:animation="@animator/splash_trim" />
-    <target android:name="s3" android:animation="@animator/splash_trim" />
 </animated-vector>

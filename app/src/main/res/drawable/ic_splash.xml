@@ -3,7 +3,6 @@
     android:drawable="@drawable/ic_splash_vec">
     <target android:name="pop" android:animation="@animator/splash_pop" />
     <target android:name="t1" android:animation="@animator/splash_trim" />
-    <target android:name="t2" android:animation="@animator/splash_trim" />
     <target android:name="s1" android:animation="@animator/splash_trim" />
     <target android:name="s2" android:animation="@animator/splash_trim" />
     <target android:name="s3" android:animation="@animator/splash_trim" />

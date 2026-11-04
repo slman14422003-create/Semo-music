@@ -5,22 +5,38 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <path android:pathData="M54,4 A50,50 0 1,1 54,104 A50,50 0 1,1 54,4 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:centerX="54" android:centerY="56" android:gradientRadius="50" android:type="radial">
+                <item android:color="#663A78FF" android:offset="0" />
+                <item android:color="#223A78FF" android:offset="0.6" />
+                <item android:color="#003A78FF" android:offset="1" />
+            </gradient>
+        </aapt:attr>
+    </path>
     <group android:name="pop" android:pivotX="54" android:pivotY="54">
-        <path android:pathData="M36,21 L72,21 Q87,21 87,36 L87,72 Q87,87 72,87 L36,87 Q21,87 21,72 L21,36 Q21,21 36,21 Z">
+        <path android:pathData="M36,21 L72,21 Q87,21 87,36 L87,72 Q87,87 72,87 L36,87 Q21,87 21,72 L21,36 Q21,21 36,21 Z" android:strokeWidth="1">
             <aapt:attr name="android:fillColor">
-                <gradient android:startX="40" android:startY="21" android:endX="68" android:endY="87" android:type="linear">
-                    <item android:color="#FF5BAEFF" android:offset="0" />
-                    <item android:color="#FF2347E0" android:offset="1" />
+                <gradient android:startX="30" android:startY="21" android:endX="78" android:endY="87" android:type="linear">
+                    <item android:color="#3DFFFFFF" android:offset="0" />
+                    <item android:color="#14FFFFFF" android:offset="0.55" />
+                    <item android:color="#0AFFFFFF" android:offset="1" />
+                </gradient>
+            </aapt:attr>
+            <aapt:attr name="android:strokeColor">
+                <gradient android:startX="21" android:startY="21" android:endX="87" android:endY="87" android:type="linear">
+                    <item android:color="#99FFFFFF" android:offset="0" />
+                    <item android:color="#1AFFFFFF" android:offset="0.5" />
+                    <item android:color="#4DFFFFFF" android:offset="1" />
                 </gradient>
             </aapt:attr>
         </path>
-        <path android:pathData="M36,21 L72,21 Q87,21 87,36 L87,40 Q54,52 21,40 L21,36 Q21,21 36,21 Z" android:fillColor="#22FFFFFF" />
-    <group android:scaleX="0.15" android:scaleY="0.15" android:translateX="19.73" android:translateY="20.33">
-        <group android:translateY="10"><path android:name="t1" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#1A000000" android:strokeWidth="48" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" /></group>
-        <group android:translateY="7"><path android:name="t2" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#33000000" android:strokeWidth="42" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" /></group>
-        <path android:name="s1" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFD9CCFF" android:strokeWidth="42" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
-        <path android:name="s2" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFEEE8FF" android:strokeWidth="32" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
-        <path android:name="s3" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFFFFFFF" android:strokeWidth="20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
-    </group>
+        <path android:pathData="M36,22.5 L72,22.5 Q85.5,22.5 85.5,36 L85.5,40 Q54,50 22.5,40 L22.5,36 Q22.5,22.5 36,22.5 Z" android:fillColor="#1AFFFFFF" />
+        <group android:scaleX="0.15" android:scaleY="0.15" android:translateX="19.73" android:translateY="20.33">
+            <group android:translateY="10"><path android:name="t1" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#26000000" android:strokeWidth="48" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" /></group>
+            <path android:name="s1" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFC9D8FF" android:strokeWidth="42" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
+            <path android:name="s2" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFE6EEFF" android:strokeWidth="32" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
+            <path android:name="s3" android:pathData="M326,190 C322,142 288,110 246,106 Q231,105 231,122 L231,294 A50,50 0 0 1 181,344 A50,50 0 0 1 131,294 A50,50 0 0 1 181,244 A50,50 0 0 1 231,294" android:strokeColor="#FFFFFFFF" android:strokeWidth="20" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" android:trimPathStart="0" android:trimPathEnd="1" />
+        </group>
     </group>
 </vector>

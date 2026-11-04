@@ -45,6 +45,10 @@ public class App extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+        if (BuildConfig.DEBUG) {
+            android.os.StrictMode.setThreadPolicy(new android.os.StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
+            android.os.StrictMode.setVmPolicy(new android.os.StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().detectLeakedRegistrationObjects().penaltyLog().build());
+        }
         CrashGuard.install(this);
         Accent.applyMode(this);
         MemoryGuard.install(this);   // covers are released when Android is short of memory

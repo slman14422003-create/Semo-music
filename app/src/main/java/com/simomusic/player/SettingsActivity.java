@@ -19,6 +19,7 @@ import java.util.List;
 public class SettingsActivity extends AppCompatActivity {
     private LinearLayout perms;
     private boolean dirty;
+    private int permSig = -1;
     private final TextView[] modeBtns = new TextView[3];
 
     /** Theme mode (auto / light / dark) and the accent color swatches. */
@@ -175,14 +176,16 @@ public class SettingsActivity extends AppCompatActivity {
             finish();
             overridePendingTransition(0, 0);
         });
-        sv.getViewTreeObserver().addOnScrollChangedListener(Glass::boost);
+        sv.setOnScrollChangeListener((v, x, y, ox, oy) -> Glass.boost());
         setContentView(stage);
-        getWindow().setBackgroundDrawable(Ui.glow(this));
-        // layered entry: each section slides in a moment after the one above it
-        root.post(() -> {
-            if (android.os.Build.VERSION.SDK_INT >= 26 && !android.animation.ValueAnimator.areAnimatorsEnabled()) return;
-            for (int i = 0; i < Math.min(col.getChildCount(), 12); i++) Ui.enter(col.getChildAt(i), 35L * i);
-        });
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.color(this, R.color.bg)));
+        if (b == null) {
+            root.post(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (!android.animation.ValueAnimator.areAnimatorsEnabled()) return;
+                for (int i = 0; i < Math.min(col.getChildCount(), 8); i++) Ui.enter(col.getChildAt(i), 30L * i);
+            });
+        }
 
         // ---- appearance
         col.addView(Ui.section(this, R.string.set_appearance));
@@ -225,8 +228,10 @@ public class SettingsActivity extends AppCompatActivity {
                 }));
         lib.addView(Ui.settingRow(this, R.drawable.ic_folder, getString(R.string.hide_folders), hiddenLabel(), null, false, v -> pickHiddenFolders()));
         lib.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.rescan), getString(R.string.rescan_sub), null, false, v -> {
-            Library.scan(this, () -> Ui.toast(this,
-                    getResources().getQuantityString(R.plurals.songs_n, Library.tracks.size(), Library.tracks.size())));
+            Library.scan(this, () -> {
+                if (isFinishing() || isDestroyed()) return;
+                Ui.toast(this, getResources().getQuantityString(R.plurals.songs_n, Library.tracks.size(), Library.tracks.size()));
+            });
             dirty = false;
         }));
         if (CrashGuard.has(this)) {
@@ -398,7 +403,19 @@ public class SettingsActivity extends AppCompatActivity {
         });
     }
 
+    private int permSignature() {
+        boolean[] f = {Perms.hasAudio(this), Perms.hasNotif(this),
+                Build.VERSION.SDK_INT >= 34 && Perms.hasFsi(this), Perms.hasOverlay(this), Perms.hasLockChannel(this),
+                Perms.hasBattery(this), Perms.hasWriteSettings(this), Build.VERSION.SDK_INT >= 31 && Perms.hasBt(this)};
+        int sig = 1;
+        for (boolean v : f) sig = (sig << 1) | (v ? 1 : 0);
+        return sig;
+    }
+
     private void fillPerms() {
+        int sig = permSignature();
+        if (sig == permSig && perms.getChildCount() > 0) return;
+        permSig = sig;
         perms.removeAllViews();
         addPerm(R.drawable.ic_folder, R.string.perm_audio, R.string.perm_audio_sub, Perms.hasAudio(this), v -> Perms.askAudio(this));
         addPerm(R.drawable.ic_star, R.string.perm_notif, R.string.perm_notif_sub, Perms.hasNotif(this), v -> Perms.askNotif(this));

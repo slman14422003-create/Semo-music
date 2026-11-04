@@ -4,18 +4,46 @@ final class StackBlur {
     private StackBlur() {
     }
 
+    private static final class Work {
+        int[] r = new int[0], g = new int[0], b = new int[0], vmin = new int[0];
+        int[] dv = new int[0];
+        int dvDiv = -1;
+        int[][] stack = new int[0][];
+    }
+
+    private static final ThreadLocal<Work> WORK = new ThreadLocal<Work>() {
+        @Override
+        protected Work initialValue() {
+            return new Work();
+        }
+    };
+
     static void blur(int[] pix, int w, int h, int radius) {
         if (radius < 1 || w < 2 || h < 2) return;
         int wm = w - 1, hm = h - 1, wh = w * h, div = radius + radius + 1;
-        int[] r = new int[wh], g = new int[wh], b = new int[wh];
+        Work k = WORK.get();
+        if (k.r.length < wh) {
+            k.r = new int[wh];
+            k.g = new int[wh];
+            k.b = new int[wh];
+        }
+        int mx = Math.max(w, h);
+        if (k.vmin.length < mx) k.vmin = new int[mx];
+        int[] r = k.r, g = k.g, b = k.b, vmin = k.vmin;
         int rsum, gsum, bsum, x, y, i, p, yp, yi, yw;
-        int[] vmin = new int[Math.max(w, h)];
         int divsum = (div + 1) >> 1;
         divsum *= divsum;
-        int[] dv = new int[256 * divsum];
-        for (i = 0; i < dv.length; i++) dv[i] = i / divsum;
+        if (k.dvDiv != div) {
+            k.dv = new int[256 * divsum];
+            for (i = 0; i < k.dv.length; i++) k.dv[i] = i / divsum;
+            k.dvDiv = div;
+        }
+        int[] dv = k.dv;
         yw = yi = 0;
-        int[][] stack = new int[div][3];
+        if (k.stack.length != div) {
+            k.stack = new int[div][3];
+        }
+        int[][] stack = k.stack;
         int stackpointer, stackstart, rbs, r1 = radius + 1;
         int routsum, goutsum, boutsum, rinsum, ginsum, binsum;
         int[] sir;

@@ -35,6 +35,7 @@ public final class Glass {
     public static LiveGlass live(View owner, View source, int radiusDp) {
         Context c = owner.getContext();
         LiveGlass g = new LiveGlass(c, owner, source, radiusDp, Ui.color(c, R.color.glass_nav_tint));
+        g.setGpu(true);
         owner.setBackground(g);
         Ui.round(owner, Ui.dp(c, radiusDp));
         return g;

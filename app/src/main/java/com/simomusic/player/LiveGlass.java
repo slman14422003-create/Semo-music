@@ -10,9 +10,12 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
+import android.graphics.RenderEffect;
+import android.graphics.RenderNode;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.SystemClock;
 import android.view.View;
 import android.view.ViewTreeObserver;
@@ -59,6 +62,12 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     private boolean paused;
     private boolean failed;
     private ViewTreeObserver vto;
+    private boolean gpu;
+    private boolean recording;
+    private RenderNode node;
+    private int nodeW;
+    private int nodeH;
+    private long cost;
 
     public LiveGlass(Context c, View owner, View source, int radiusDp, int tint) {
         this.owner = owner;
@@ -95,6 +104,10 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         sheet = on;
     }
 
+    public void setGpu(boolean on) {
+        gpu = on && Build.VERSION.SDK_INT >= 31;
+    }
+
     /** Keeps refreshing while attached (a sheet over a screen that keeps changing). */
     public void setTicking(boolean on) {
         ticking = on;
@@ -123,23 +136,70 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         if (vto != null && vto.isAlive()) vto.removeOnPreDrawListener(this);
         vto = null;
         owner.removeCallbacks(ticker);
+        if (node != null) {
+            node.discardDisplayList();
+            nodeW = 0;
+        }
     }
 
     @Override
     public boolean onPreDraw() {
-        update();
+        if (gpu) requestGpuFrame();
+        else update();
         return true;
     }
 
+    private boolean live() {
+        if (failed || paused || alpha < 8 || Gest.busy) return false;
+        if (!owner.isShown() || owner.getAlpha() < 0.02f) return false;
+        if (source.getLayerType() != View.LAYER_TYPE_NONE) return false;
+        return owner.getWidth() > 0 && owner.getHeight() > 0 && source.getWidth() > 0;
+    }
+
+    private void requestGpuFrame() {
+        if (!live()) return;
+        long now = SystemClock.uptimeMillis();
+        if (now - last < (now < Glass.hotUntil ? 8 : 110)) return;
+        last = now;
+        owner.invalidate();
+    }
+
+    private void recordGpu(Rect r) {
+        int w = r.width();
+        int h = r.height();
+        if (node == null) {
+            node = new RenderNode("glass");
+            nodeW = 0;
+        }
+        if (nodeW != w || nodeH != h) {
+            nodeW = w;
+            nodeH = h;
+            node.setPosition(0, 0, w, h);
+            float sigma = Math.max(1f, blurR * ds * 0.5f);
+            RenderEffect blur = RenderEffect.createBlurEffect(sigma, sigma, Shader.TileMode.CLAMP);
+            node.setRenderEffect(RenderEffect.createColorFilterEffect(new ColorMatrixColorFilter(sat), blur));
+        }
+        owner.getLocationOnScreen(a);
+        source.getLocationOnScreen(b);
+        Canvas rc = node.beginRecording(w, h);
+        try {
+            rc.drawColor(bgColor);
+            rc.translate(-(a[0] - b[0]), -(a[1] - b[1]));
+            recording = true;
+            source.draw(rc);
+        } finally {
+            recording = false;
+            node.endRecording();
+        }
+    }
+
     private void update() {
-        if (failed || paused || alpha < 8 || Gest.busy) return;
-        if (!owner.isShown() || owner.getAlpha() < 0.02f) return;
-        if (source.getLayerType() != View.LAYER_TYPE_NONE) return;
+        if (!live()) return;
         int w = owner.getWidth();
         int h = owner.getHeight();
-        if (w <= 0 || h <= 0 || source.getWidth() <= 0) return;
         long now = SystemClock.uptimeMillis();
-        if (now - last < (now < Glass.hotUntil ? 33 : 110)) return;
+        long gap = now < Glass.hotUntil ? 33 : 110;
+        if (now - last < Math.max(gap, cost * 6)) return;
         last = now;
         try {
             int bw = Math.max(2, (w + ds - 1) / ds);
@@ -165,6 +225,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             bmp = null;
             invalidateSelf();
         }
+        cost = Math.min(60L, SystemClock.uptimeMillis() - now);
     }
 
     @Override
@@ -179,7 +240,23 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         if (r.isEmpty() || alpha < 4) return;
         strokePaint.setAlpha(alpha);
         sheenPaint.setAlpha(alpha);
-        if (bmp != null && !failed) {
+        if (gpu && !failed && !recording && canvas.isHardwareAccelerated() && live()) {
+            try {
+                recordGpu(r);
+                node.setAlpha(alpha / 255f);
+                canvas.drawRenderNode(node);
+                tintPaint.setColor(tint);
+                tintPaint.setAlpha(tintPaint.getAlpha() * alpha / 255);
+                canvas.drawRect(r, tintPaint);
+            } catch (RuntimeException e) {
+                failed = true;
+                solidPaint.setAlpha(alpha);
+                canvas.drawRect(r, solidPaint);
+            }
+        } else if (gpu && recording) {
+            solidPaint.setAlpha(alpha);
+            canvas.drawRect(r, solidPaint);
+        } else if (bmp != null && !failed) {
             rect.set(r);
             bmpPaint.setAlpha(alpha);
             canvas.drawBitmap(bmp, null, rect, bmpPaint);

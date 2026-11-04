@@ -615,6 +615,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         } else {
             subtitle.setText(getResources().getQuantityString(R.plurals.songs_n, total, total));
         }
+        if (tab == 1) lists.rebuild();
         RecyclerView.Adapter<?> target = tab == 1 ? lists : songs;
         boolean swapped = rv.getAdapter() != target;
         if (swapped) {
@@ -820,7 +821,44 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
     }
 
     /** Row 0 is "New playlist", then the smart mixes, then Favorites and the user's playlists. */
+    /** Rows are built once per data change (inflating a row on every bind is what made this tab stutter while scrolling). */
     private final class PlaylistAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private final java.util.ArrayList<View> rows = new java.util.ArrayList<>();
+
+        void rebuild() {
+            rows.clear();
+            final int[] kinds = mixKinds();
+            final java.util.List<Store.Playlist> pls = Store.playlists(MainActivity.this);
+            final int n = pls.size() + 1 + kinds.length;
+            View add = Ui.settingRow(MainActivity.this, R.drawable.ic_add, getString(R.string.new_playlist), null, null, false,
+                    v -> Menus.ask(MainActivity.this, R.string.new_playlist, "", name -> {
+                        Store.create(MainActivity.this, name);
+                        refresh();
+                    }));
+            Ui.flatRow(MainActivity.this, add.findViewById(R.id.card), true, false, 72, 0);
+            rows.add(add);
+            for (int i = 0; i < kinds.length; i++) {
+                final int kind = kinds[i];
+                View row = Ui.settingRow(MainActivity.this, MIX_ICON[kind], getString(MIX_TITLE[kind]), getString(MIX_SUB[kind]),
+                        null, false, v -> playMix(kind));
+                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, rows.size() != n - 1, 72, 0);
+                rows.add(row);
+            }
+            for (final Store.Playlist pl : pls) {
+                int cnt = Library.count(pl.ids);
+                int ic = Store.FAV.equals(pl.id) ? R.drawable.ic_heart_fill
+                        : Store.AI.equals(pl.id) ? R.drawable.ic_ai : R.drawable.ic_list;
+                View row = Ui.settingRow(MainActivity.this, ic,
+                        pl.name, getResources().getQuantityString(R.plurals.songs_n, cnt, cnt), null, false, v -> {
+                            Intent i = new Intent(MainActivity.this, PlaylistActivity.class);
+                            i.putExtra("pid", pl.id);
+                            Ui.go(MainActivity.this, i);
+                        });
+                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, rows.size() != n - 1, 72, 0);
+                rows.add(row);
+            }
+        }
+
         @NonNull
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup p, int t) {
@@ -832,41 +870,17 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
             ViewGroup f = (ViewGroup) h.itemView;
+            if (pos >= rows.size()) return;
+            View row = rows.get(pos);
+            if (row.getParent() == f) return;
+            if (row.getParent() instanceof ViewGroup) ((ViewGroup) row.getParent()).removeView(row);
             f.removeAllViews();
-            int n = getItemCount();
-            int[] kinds = mixKinds();
-            View row;
-            if (pos == 0) {
-                row = Ui.settingRow(MainActivity.this, R.drawable.ic_add, getString(R.string.new_playlist), null, null, false,
-                        v -> Menus.ask(MainActivity.this, R.string.new_playlist, "", name -> {
-                            Store.create(MainActivity.this, name);
-                            refresh();
-                        }));
-                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), true, false, 72, 0);
-            } else if (pos <= kinds.length) {
-                final int kind = kinds[pos - 1];
-                row = Ui.settingRow(MainActivity.this, MIX_ICON[kind], getString(MIX_TITLE[kind]), getString(MIX_SUB[kind]),
-                        null, false, v -> playMix(kind));
-                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, pos != n - 1, 72, 0);
-            } else {
-                final Store.Playlist pl = Store.playlists(MainActivity.this).get(pos - 1 - kinds.length);
-                int cnt = Library.count(pl.ids);
-                int ic = Store.FAV.equals(pl.id) ? R.drawable.ic_heart_fill
-                        : Store.AI.equals(pl.id) ? R.drawable.ic_ai : R.drawable.ic_list;
-                row = Ui.settingRow(MainActivity.this, ic,
-                        pl.name, getResources().getQuantityString(R.plurals.songs_n, cnt, cnt), null, false, v -> {
-                            Intent i = new Intent(MainActivity.this, PlaylistActivity.class);
-                            i.putExtra("pid", pl.id);
-                            Ui.go(MainActivity.this, i);
-                        });
-                Ui.flatRow(MainActivity.this, row.findViewById(R.id.card), false, pos != n - 1, 72, 0);
-            }
             f.addView(row);
         }
 
         @Override
         public int getItemCount() {
-            return Store.playlists(MainActivity.this).size() + 1 + mixKinds().length;
+            return rows.size();
         }
     }
 }

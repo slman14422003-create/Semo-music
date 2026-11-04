@@ -218,6 +218,17 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                 Math.min(getResources().getDisplayMetrics().widthPixels, Ui.dp(this, 520)), -1, Gravity.CENTER_HORIZONTAL));
         setContentView(root);
         Ui.edgeToEdge(this, content);
+        // the app chip and the close button sit at the far sides, away from the camera cut-out in the middle: ignore the cut-out's
+        // height so both ride as high as possible (the status bar is hidden here anyway)
+        final int pl = Ui.dp(this, 24), pt = Ui.dp(this, 6), pr = Ui.dp(this, 24), pb = Ui.dp(this, 6);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
+            androidx.core.graphics.Insets b = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            androidx.core.graphics.Insets cut = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(pl + Math.max(b.left, cut.left), pt + b.top, pr + Math.max(b.right, cut.right),
+                    pb + Math.max(b.bottom, cut.bottom));
+            return insets;
+        });
+        androidx.core.view.ViewCompat.requestApplyInsets(content);
         Ui.bars(this, true);       // the lock screen is always dark: white clock / battery icons
         hideStatusBar();           // the lock screen has its own clock: no system status bar on top of it
         content.setClipChildren(false);

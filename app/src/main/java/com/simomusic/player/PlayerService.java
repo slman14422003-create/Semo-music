@@ -58,8 +58,8 @@ public class PlayerService extends MediaSessionService {
                 KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
                 if (km != null && km.isKeyguardLocked()) {
                     LockLauncher.show(PlayerService.this);
-                } else if (++tries < 10) {
-                    h.postDelayed(this, 150);
+                } else if (++tries < 30) {
+                    h.postDelayed(this, 50);
                 }
             } catch (RuntimeException e) {
                 CrashGuard.nonFatal("show lock player", e);
@@ -341,7 +341,13 @@ public class PlayerService extends MediaSessionService {
                 .build();
         androidx.media3.datasource.DefaultDataSource.Factory dataSources = new androidx.media3.datasource.DefaultDataSource.Factory(
                 this, new androidx.media3.datasource.okhttp.OkHttpDataSource.Factory(http).setUserAgent("SimoMusic/" + BuildConfig.VERSION_NAME));
+        androidx.media3.exoplayer.DefaultLoadControl load = new androidx.media3.exoplayer.DefaultLoadControl.Builder()
+                .setBufferDurationsMs(15000, 40000, 800, 2000)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build();
         player = new ExoPlayer.Builder(this, renderers)
+                .setLoadControl(load)
+                .setUsePlatformDiagnostics(false)
                 .setMediaSourceFactory(new androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSources))
                 .setAudioAttributes(new AudioAttributes.Builder()
                         .setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)

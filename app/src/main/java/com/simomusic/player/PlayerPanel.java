@@ -267,7 +267,60 @@ public final class PlayerPanel extends FrameLayout {
         else collapse(true);
     }
 
+    private void expandFromLock(final int[] from) {
+        setVisibility(VISIBLE);
+        col.requestApplyInsets();
+        setTranslationY(0f);
+        applyProgress();
+        expanded = true;
+        host.onState(true);
+        np.start();
+        setAlpha(0f);
+        animate().alpha(1f).setDuration(Motion.SHORT).setInterpolator(Motion.ENTER).start();
+        final float rise = Ui.dp(act, 18);
+        for (int i = 1; i < col.getChildCount(); i++) {
+            final View v = col.getChildAt(i);
+            if (v instanceof CoverBox) continue;
+            v.animate().cancel();
+            v.setAlpha(0f);
+            v.setTranslationY(rise);
+            v.animate().alpha(1f).translationY(0f).setStartDelay(60L + (i - 1) * 35L).setDuration(380).setInterpolator(Motion.ENTER).start();
+        }
+        final android.widget.ImageView art = np.art;
+        getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            @Override
+            public boolean onPreDraw() {
+                getViewTreeObserver().removeOnPreDrawListener(this);
+                try {
+                    int tw = art.getWidth(), th = art.getHeight();
+                    if (tw <= 0 || th <= 0) return true;
+                    int[] loc = new int[2];
+                    art.getLocationOnScreen(loc);
+                    float endX = art.getScaleX(), endY = art.getScaleY();
+                    float s = from[2] / (float) tw;
+                    art.animate().cancel();
+                    art.setTranslationX(from[0] + from[2] / 2f - (loc[0] + tw / 2f));
+                    art.setTranslationY(from[1] + from[3] / 2f - (loc[1] + th / 2f));
+                    art.setScaleX(s);
+                    art.setScaleY(s);
+                    art.animate().translationX(0f).translationY(0f).scaleX(endX).scaleY(endY)
+                            .setDuration(Motion.LONG + 60).setInterpolator(Motion.ENTER).start();
+                } catch (RuntimeException e) {
+                    CrashGuard.nonFatal("lock handoff", e);
+                }
+                return true;
+            }
+        });
+    }
+
     public void expand(boolean animate) {
+        if (animate && getVisibility() != VISIBLE) {
+            int[] from = LockHandoff.take();
+            if (from != null) {
+                expandFromLock(from);
+                return;
+            }
+        }
         if (getVisibility() != VISIBLE) {
             setVisibility(VISIBLE);
             col.requestApplyInsets();

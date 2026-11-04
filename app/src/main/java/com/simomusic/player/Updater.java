@@ -179,9 +179,11 @@ public final class Updater {
                 File[] old = out.getParentFile().listFiles();
                 if (old != null) for (File f : old) //noinspection ResultOfMethodCallIgnored
                     f.delete();
+                if (!trusted(info.url)) throw new java.io.IOException("untrusted url");
                 c = open(info.url);
                 if (c.getResponseCode() != 200) throw new java.io.IOException("HTTP " + c.getResponseCode());
                 long total = c.getContentLengthLong() > 0 ? c.getContentLengthLong() : info.size;
+                if (!trusted(c.getURL().toString())) throw new java.io.IOException("untrusted redirect");
                 if (total > 400L * 1024 * 1024) throw new java.io.IOException("too large");
                 long done = 0;
                 int last = -1;
@@ -217,11 +219,36 @@ public final class Updater {
         }, "update-download").start();
     }
 
+    private static boolean trusted(String url) {
+        try {
+            Uri u = Uri.parse(url);
+            String h = u.getHost() == null ? "" : u.getHost().toLowerCase(java.util.Locale.ROOT);
+            return "https".equals(u.getScheme()) && (h.equals("github.com") || h.endsWith(".github.com") || h.endsWith(".githubusercontent.com"));
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private static boolean sameSigner(android.content.pm.PackageManager pm, String pkg, String path) {
+        if (Build.VERSION.SDK_INT < 28) return true;
+        try {
+            PackageInfo a = pm.getPackageArchiveInfo(path, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+            PackageInfo b = pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES);
+            if (a == null || b == null || a.signingInfo == null || b.signingInfo == null) return false;
+            java.util.Set<android.content.pm.Signature> x = new java.util.HashSet<>(java.util.Arrays.asList(a.signingInfo.getApkContentsSigners()));
+            java.util.Set<android.content.pm.Signature> y = new java.util.HashSet<>(java.util.Arrays.asList(b.signingInfo.getApkContentsSigners()));
+            return !x.isEmpty() && x.equals(y);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private static boolean isThisApp(Context c, File f) {
         try {
             android.content.pm.PackageManager pm = c.getPackageManager();
             PackageInfo p = pm.getPackageArchiveInfo(f.getAbsolutePath(), 0);
             if (p == null || !c.getPackageName().equals(p.packageName)) return false;
+            if (!sameSigner(pm, c.getPackageName(), f.getAbsolutePath())) return false;
             PackageInfo cur = pm.getPackageInfo(c.getPackageName(), 0);
             return androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(p)
                     >= androidx.core.content.pm.PackageInfoCompat.getLongVersionCode(cur);

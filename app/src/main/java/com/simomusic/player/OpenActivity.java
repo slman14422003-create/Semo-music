@@ -140,16 +140,20 @@ public class OpenActivity extends Activity {
             long dayAgo = System.currentTimeMillis() - 24L * 3600 * 1000;
             for (int i = 0; i < old.length - 12; i++) if (old[i].lastModified() < dayAgo) old[i].delete();
         }
+        String src = null;
         if ("file".equals(u.getScheme())) {
             String cp = new File(String.valueOf(u.getPath())).getCanonicalPath();
-            if (cp.startsWith("/data/") || cp.startsWith("/proc/") || cp.startsWith(getApplicationInfo().dataDir)) {
+            if (cp.startsWith("/data/") || cp.startsWith("/proc/") || cp.startsWith("/mnt/user/") || cp.startsWith("/sys/")
+                    || cp.startsWith(getApplicationInfo().dataDir) || cp.contains("/Android/data/") || cp.contains("/Android/obb/")) {
                 throw new SecurityException("blocked path");
             }
+            src = cp;
         }
         String n = name(u).replaceAll("[^\\p{L}\\p{N}._ -]", "_");
+        if (n.length() > 80) n = n.substring(n.length() - 80);
         if (!n.contains(".")) n += ".mp3";
         File f = new File(dir, System.currentTimeMillis() % 100000 + "_" + n);
-        try (InputStream in = "file".equals(u.getScheme()) ? new java.io.FileInputStream(u.getPath()) : getContentResolver().openInputStream(u);
+        try (InputStream in = src != null ? new java.io.FileInputStream(src) : getContentResolver().openInputStream(u);
              OutputStream out = new FileOutputStream(f)) {
             if (in == null) throw new java.io.FileNotFoundException(String.valueOf(u));
             byte[] buf = new byte[64 * 1024];

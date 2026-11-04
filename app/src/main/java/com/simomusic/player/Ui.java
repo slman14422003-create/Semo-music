@@ -23,7 +23,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.DrawableCompat;
 import androidx.core.widget.ImageViewCompat;
@@ -701,26 +700,6 @@ public final class Ui {
         return w;
     }
 
-    /** Thumb that always contrasts with the track: dark on a light accent (white accent made the whole switch look blank), white otherwise. */
-    private static android.graphics.drawable.Drawable switchThumb(Context c) {
-        int accent = color(c, R.color.accent);
-        boolean light = androidx.core.graphics.ColorUtils.calculateLuminance(accent) > 0.55;
-        int on = light ? 0xFF101014 : 0xFFFFFFFF;
-        int off = color(c, R.color.text_secondary);
-        android.graphics.drawable.StateListDrawable sl = new android.graphics.drawable.StateListDrawable();
-        sl.addState(new int[]{android.R.attr.state_checked}, thumbOval(on, dp(c, 22), dp(c, 3)));
-        sl.addState(new int[]{}, thumbOval(off, dp(c, 16), dp(c, 6)));
-        return sl;
-    }
-
-    private static android.graphics.drawable.Drawable thumbOval(int col, int size, int inset) {
-        GradientDrawable g = new GradientDrawable();
-        g.setShape(GradientDrawable.OVAL);
-        g.setColor(col);
-        g.setSize(size, size);
-        return new android.graphics.drawable.InsetDrawable(g, inset);
-    }
-
     public static View toggleRow(Context c, CharSequence title, CharSequence sub, boolean on,
                                  final CompoundButton.OnCheckedChangeListener l) {
         LinearLayout card = new LinearLayout(c);
@@ -728,14 +707,8 @@ public final class Ui {
         LinearLayout.LayoutParams lp = weight(1);
         lp.setMarginEnd(dp(c, 14));
         card.addView(textColumn(c, title, sub), lp);
-        final SwitchCompat sw = new SwitchCompat(c);
-        sw.setBackground(null);
-        sw.setShowText(false);
-        sw.setThumbDrawable(switchThumb(c));
-        sw.setTrackDrawable(ContextCompat.getDrawable(c, R.drawable.switch_track));
+        final Toggle sw = new Toggle(c);
         sw.setChecked(on);
-        sw.setClickable(false);
-        sw.setFocusable(false);
         card.addView(sw);
         w.setOnClickListener(v -> {
             tap(v);

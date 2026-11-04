@@ -51,6 +51,7 @@ public final class Glass {
             g.setBlur(6);
             g.setSaturation(1.15f);
             g.setSheet(!card);
+            g.setGpu(true);
             g.setTicking(true);
             root.setBackground(g);
         } else {

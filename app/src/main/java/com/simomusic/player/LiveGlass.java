@@ -17,6 +17,7 @@ import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.SystemClock;
+import android.view.Choreographer;
 import android.view.View;
 import android.view.ViewTreeObserver;
 
@@ -68,6 +69,18 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     private int nodeW;
     private int nodeH;
     private long cost;
+    private boolean looping;
+    private final Choreographer.FrameCallback frame = new Choreographer.FrameCallback() {
+        @Override
+        public void doFrame(long t) {
+            if (vto == null || !gpu || !ticking) {
+                looping = false;
+                return;
+            }
+            if (live()) owner.invalidate();
+            Choreographer.getInstance().postFrameCallback(this);
+        }
+    };
 
     public LiveGlass(Context c, View owner, View source, int radiusDp, int tint) {
         this.owner = owner;
@@ -128,7 +141,12 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     public void onViewAttachedToWindow(@NonNull View v) {
         vto = owner.getViewTreeObserver();
         if (vto.isAlive()) vto.addOnPreDrawListener(this);
-        if (ticking) owner.postDelayed(ticker, 400);
+        if (gpu && ticking) {
+            if (!looping) {
+                looping = true;
+                Choreographer.getInstance().postFrameCallback(frame);
+            }
+        } else if (ticking) owner.postDelayed(ticker, 400);
     }
 
     @Override
@@ -136,6 +154,8 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         if (vto != null && vto.isAlive()) vto.removeOnPreDrawListener(this);
         vto = null;
         owner.removeCallbacks(ticker);
+        Choreographer.getInstance().removeFrameCallback(frame);
+        looping = false;
         if (node != null) {
             node.discardDisplayList();
             nodeW = 0;

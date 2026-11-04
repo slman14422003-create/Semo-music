@@ -183,3 +183,19 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Bottom sheets / dialogs (Glass.sheet): LiveGlass over the activity decor (cross-window: owner and source measured with getLocationOnScreen), blur radius 6, saturation 1.15, tint glass_sheet_tint, setSheet(true) extends the rim below the window, setTicking(true) re-invalidates every 160 ms so it stays live; SnapGlass is only the fallback when there is no activity.
 - WavePainter: the thumb is a round ring (accent outer, white inner; dark inner when the accent is white) like One UI, wave unchanged. The media notification in the shade is drawn by the system (One UI), the app only supplies title / artist / artwork / actions.
 - First thing next: run the GitHub Actions build and fix any compile error reported.
+
+# Toggle, playlists overscroll, black icon, lock screen
+- Toggle.java: custom iOS-style switch (51x31 dp, green track, white thumb with shadow, animated). Ui.toggleRow uses it; switch_thumb / switch_track drawables and SwitchCompat removed. New color switch_off (light + night).
+- MainActivity.fitOverscroll: stretch overscroll is disabled while the list cannot scroll (Playlists tab), enabled on API 31+ when it can.
+- Charcoal icon: black to near-black gradient, softer sheen, pure white note (no lavender layers).
+- LockLauncher: LockLauncher.alive (true only while LockActivity is started) skips the full-screen-intent notification when the player is already visible; the notification is built once and re-posted. LockActivity pauses the arrow pulse and releases drag layers in onStop; entrance delays shortened. PlayerService polls the keyguard every 50 ms (30 tries) instead of 150 ms.
+- baseline-prof.txt: also covers media3, core, dynamicanimation, swiperefreshlayout and app classes.
+- Not compiled in the sandbox: build once and check the Toggle, Playlists drag and the lock screen on a device.
+
+# Security pass, perf, lock to player handoff
+- Manifest: usesCleartextTraffic=false (https only; http links from other apps no longer stream).
+- Updater: download url and redirect host must be https on github.com / githubusercontent.com; the downloaded apk must carry the same signing certificate as the installed app (API 28+) besides package and version checks.
+- OpenActivity.copy: file: uris are read from the canonical path (no symlink swap), more system paths blocked (/sys, /mnt/user, Android/data, Android/obb), copied file name capped at 80 chars.
+- PlayerService: DefaultLoadControl (15 s min, 40 s max buffer, quick start), platform diagnostics off. App: StrictMode logging in debug builds only.
+- LockHandoff.java: LockActivity.unlock records the on-screen cover box (including drag offset); PlayerPanel.expandFromLock fades the player in and flies its cover from that box to its own place, other rows rise in sequence. Falls back to the normal slide-up when no fresh handoff exists (4 s window).
+- Not compiled in the sandbox: build once and test unlock slow / fast, and an update download.

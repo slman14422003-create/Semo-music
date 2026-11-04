@@ -4,3 +4,9 @@ HSPLcom/simomusic/player/**-><init>(**)V
 Landroidx/recyclerview/widget/**;
 HSPLandroidx/recyclerview/widget/**->**(**)**
 HSPLandroidx/appcompat/widget/**->**(**)**
+Lcom/simomusic/player/**;
+Landroidx/media3/**;
+HSPLandroidx/media3/**->**(**)**
+HSPLandroidx/core/**->**(**)**
+HSPLandroidx/dynamicanimation/**->**(**)**
+HSPLandroidx/swiperefreshlayout/**->**(**)**

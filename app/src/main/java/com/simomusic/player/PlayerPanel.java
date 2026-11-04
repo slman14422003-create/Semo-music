@@ -127,7 +127,9 @@ public final class PlayerPanel extends FrameLayout {
         ((LinearLayout.LayoutParams) lyr.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
         top.addView(lyr);
         top.addView(Ui.icon(d, R.drawable.ic_more, R.string.more, v -> Menus.more(a, this::refreshExtras)));
-        col.addView(top, Ui.lp(-1, -2));
+        LinearLayout.LayoutParams topLp = Ui.lp(-1, -2);
+        topLp.topMargin = Ui.dp(a, 16);   // clear of the grab handle: the Now playing row no longer touches it
+        col.addView(top, topLp);
 
         CoverBox cover = new CoverBox(d, 360);
         cover.setContentDescription(d.getString(R.string.cover_art));
@@ -238,6 +240,7 @@ public final class PlayerPanel extends FrameLayout {
     /** Mini player drag: panel appears at the mini player and follows the finger upward. */
     public void beginDrag() {
         if (anim != null) anim.cancel();
+        resetKids();
         setVisibility(VISIBLE);
         layer(true);
         col.requestApplyInsets();
@@ -272,6 +275,7 @@ public final class PlayerPanel extends FrameLayout {
         np.start();
         if (animate) {
             layer(true);
+            if (getTranslationY() >= collapsedY - 2f) stagger();   // opened by a tap (not by a drag): content arrives one piece at a time
             animateTo(0f, null);
         } else {
             setTranslationY(0f);
@@ -280,10 +284,42 @@ public final class PlayerPanel extends FrameLayout {
         }
     }
 
+    /** Opening choreography: the cover swells in with a soft overshoot, the rest of the sheet rises behind it in sequence. */
+    private void resetKids() {
+        for (int i = 1; i < col.getChildCount(); i++) {
+            View v = col.getChildAt(i);
+            v.animate().cancel();
+            v.setAlpha(1f);
+            v.setTranslationY(0f);
+            v.setScaleX(1f);
+            v.setScaleY(1f);
+        }
+    }
+
+    private void stagger() {
+        final float rise = Ui.dp(act, 34);
+        for (int i = 1; i < col.getChildCount(); i++) {
+            final View v = col.getChildAt(i);
+            v.animate().cancel();
+            v.setAlpha(0f);
+            v.setTranslationY(rise + i * Ui.dp(act, 6));
+            if (v instanceof CoverBox) {
+                v.setScaleX(0.84f);
+                v.setScaleY(0.84f);
+            }
+            long delay = 90L + (i - 1) * 55L;
+            android.view.ViewPropertyAnimator pa = v.animate().alpha(1f).translationY(0f)
+                    .setStartDelay(delay).setDuration(460).setInterpolator(Motion.ENTER);
+            if (v instanceof CoverBox) pa.scaleX(1f).scaleY(1f).setDuration(560).setInterpolator(new android.view.animation.OvershootInterpolator(1.1f));
+            pa.start();
+        }
+    }
+
     public void collapse(boolean animate) {
         expanded = false;
         host.onState(false);
         final Runnable end = () -> {
+            resetKids();
             setVisibility(GONE);
             np.stop();
             host.onCollapsed();

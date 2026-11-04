@@ -191,6 +191,11 @@ public final class Store {
             }
         } catch (JSONException | NumberFormatException ignored) {
         }
+        // built-in lists are always named in the CURRENT language (the stored name was frozen in whatever language was active when it was created)
+        for (Playlist p : cache) {
+            if (FAV.equals(p.id)) p.name = c.getString(R.string.favorites);
+            else if (AI.equals(p.id)) p.name = c.getString(R.string.ai_mix);
+        }
         boolean hasFav = false, hasAi = false;
         for (Playlist p : cache) {
             if (FAV.equals(p.id)) hasFav = true;

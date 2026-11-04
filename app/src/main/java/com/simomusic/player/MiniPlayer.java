@@ -134,7 +134,14 @@ public final class MiniPlayer extends LinearLayout implements Player.Listener {
         play = new RingPlay(c);
         play.setOnClickListener(v -> {
             if (!expanded) {
-                setExpanded(true, true);
+                // a tap on the round button opens the full player (it grows out of the button, drag down to put it back)
+                if (panel != null) {
+                    Ui.confirm(v);
+                    panel.setCollapsedY(getTop());
+                    panel.expand(true);
+                } else {
+                    setExpanded(true, true);
+                }
                 return;
             }
             scheduleCollapse();

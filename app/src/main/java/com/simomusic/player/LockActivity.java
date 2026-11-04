@@ -257,9 +257,9 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
 
         if (animationsOn()) {
             Ui.enter(clockBox, 0);
-            Ui.enter(cover, 90);
-            Ui.enter(glass, 170);
-            Ui.enter(hint, 260);
+            Ui.enter(cover, 40);
+            Ui.enter(glass, 80);
+            Ui.enter(hint, 120);
         }
     }
 
@@ -466,7 +466,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
             km.requestDismissKeyguard(this, new KeyguardManager.KeyguardDismissCallback() {
                 @Override
                 public void onDismissSucceeded() {
-                    // straight into the app with the full player up: one continuous motion from lock screen to player
+                    LockHandoff.mark(np.art);
                     Ui.go(LockActivity.this, MainActivity.openPlayerIntent(LockActivity.this));
                     finish();
                 }
@@ -512,8 +512,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         super.onStart();
         Pb.connect(this);
         LockLauncher.lastSeen = android.os.SystemClock.elapsedRealtime();
+        LockLauncher.alive = true;
         if (np != null) np.start();
         clockH.post(statusTick);
+        if (pulse != null && animationsOn() && !dragLive && !pulse.isStarted()) pulse.start();
     }
 
     @Override
@@ -521,7 +523,12 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         if (dragLive) {
             dragLive = false;
             Gest.busy = false;
+            for (View v : movers()) {
+                if (v != null) v.setLayerType(View.LAYER_TYPE_NONE, null);
+            }
         }
+        if (pulse != null) pulse.cancel();
+        LockLauncher.alive = false;
         LockLauncher.lastSeen = android.os.SystemClock.elapsedRealtime();
         if (np != null) np.stop();
         clockH.removeCallbacksAndMessages(null);
@@ -530,6 +537,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
 
     @Override
     protected void onDestroy() {
+        LockLauncher.alive = false;
         if (dragLive) {
             dragLive = false;
             Gest.busy = false;

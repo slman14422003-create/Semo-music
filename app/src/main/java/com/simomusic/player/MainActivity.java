@@ -272,6 +272,9 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             ((androidx.recyclerview.widget.SimpleItemAnimator) ia).setSupportsChangeAnimations(false);
         }
         ListTuning.apply(rv);
+        rv.addOnLayoutChangeListener((lv, ll, lt, lr, lb, oll, olt, olr, olb) -> {
+            if (lb - lt != olb - olt) rv.post(this::fitOverscroll);
+        });
         rv.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView r, int dx, int dy) {
@@ -592,6 +595,13 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
         });
     }
 
+    private void fitOverscroll() {
+        if (rv == null || isFinishing() || isDestroyed()) return;
+        boolean scrolls = rv.canScrollVertically(1) || rv.canScrollVertically(-1);
+        int mode = scrolls && android.os.Build.VERSION.SDK_INT >= 31 ? View.OVER_SCROLL_ALWAYS : View.OVER_SCROLL_NEVER;
+        if (rv.getOverScrollMode() != mode) rv.setOverScrollMode(mode);
+    }
+
     private void applyList(List<Track> all) {
         int total = Library.tracks.size();
         shown = all;
@@ -630,6 +640,7 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
             rv.animate().translationX(0f).alpha(1f).setDuration(Motion.BASE).setInterpolator(Motion.ENTER).start();
         }
         if (tab == 1) lists.notifyDataSetChanged();
+        rv.post(this::fitOverscroll);
         if ((swapped || animateNext) && target.getItemCount() > 0) {
             animateNext = false;
             rv.scheduleLayoutAnimation();

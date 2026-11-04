@@ -24,6 +24,9 @@ public final class LockLauncher {
     /** elapsedRealtime when the lock player was last visible, so pressing power on it doesn't instantly re-open it. */
     public static volatile long lastSeen;
 
+    public static volatile boolean alive;
+    private static Notification cached;
+
     /** True when the notification and "show over lock screen" access that the player needs are both granted. */
     public static boolean ready(Context c) {
         return Perms.hasNotif(c) && Perms.hasFsi(c) && Perms.hasLockChannel(c);
@@ -44,7 +47,16 @@ public final class LockLauncher {
             started = true;
         } catch (Exception ignored) {
         }
+        if (alive && started) return true;
         if (!Perms.hasNotif(c) || !Perms.hasFsi(c)) return started;
+        if (cached != null) {
+            try {
+                NotificationManagerCompat.from(c).notify(ID, cached);
+                return true;
+            } catch (RuntimeException e) {
+                return started;
+            }
+        }
         PendingIntent pi = PendingIntent.getActivity(c, 11, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         Notification n = new NotificationCompat.Builder(c, App.CH_LOCK)
                 .setSmallIcon(R.drawable.ic_notif)
@@ -59,6 +71,7 @@ public final class LockLauncher {
                 .setSilent(true)
                 .setTimeoutAfter(8000)
                 .build();
+        cached = n;
         try {
             NotificationManagerCompat.from(c).notify(ID, n);
             return true;

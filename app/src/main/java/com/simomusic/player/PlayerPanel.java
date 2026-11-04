@@ -121,14 +121,12 @@ public final class PlayerPanel extends FrameLayout {
         capLp.setMarginStart(Ui.dp(a, 8));
         chip.addView(cap, capLp);
         top.addView(Ui.space(d, 1f));
-        top.addView(chip, Ui.lp(-2, -2));
-        top.addView(Ui.space(d, 1f));
         ImageButton lyr = Ui.icon(d, R.drawable.ic_lyrics, R.string.lyrics, v -> Ui.go(a, new android.content.Intent(a, LyricsActivity.class)));
         ((LinearLayout.LayoutParams) lyr.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
         top.addView(lyr);
         top.addView(Ui.icon(d, R.drawable.ic_more, R.string.more, v -> Menus.more(a, this::refreshExtras)));
         LinearLayout.LayoutParams topLp = Ui.lp(-1, -2);
-        topLp.topMargin = Ui.dp(a, 16);   // clear of the grab handle: the Now playing row no longer touches it
+        topLp.topMargin = Ui.dp(a, 8);
         col.addView(top, topLp);
 
         CoverBox cover = new CoverBox(d, 360);
@@ -139,6 +137,12 @@ public final class PlayerPanel extends FrameLayout {
         cover.setCover(np.art);
         col.addView(cover, new LinearLayout.LayoutParams(-1, 0, 1f));
         attachCoverSwipe(np.art);
+        // "Now playing" lives between the cover and the title now, centred, instead of crowding the top bar
+        LinearLayout.LayoutParams chp = Ui.lp(-2, -2);
+        chp.gravity = Gravity.CENTER_HORIZONTAL;
+        chp.topMargin = Ui.dp(a, 2);
+        chp.bottomMargin = Ui.dp(a, 4);
+        col.addView(chip, chp);
 
         LinearLayout titleRow = new LinearLayout(d);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);

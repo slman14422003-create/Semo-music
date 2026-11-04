@@ -1,43 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Night-mode overrides — picked up automatically whenever the device is in
+  dark mode, no Kotlin code needed to select this file. They keep the
+  pre-Compose chrome (window background, splash, ripple, edge glow) matching
+  Compose's actual dark surface instead of staying a fixed color regardless
+  of theme. The accent matches ClaudeOrangeDark in ui/theme/Color.kt.
+-->
 <resources>
-    <!-- AMOLED dark: true black canvas, near-black capsules with visible borders, bright high-contrast text -->
-    <color name="bg">#000000</color>
-    <color name="surface">#141418</color>
-    <color name="surface_high">#202027</color>
-    <color name="field">#0C0C10</color>
-    <color name="stroke">#30303A</color>
-    <color name="stroke_soft">#22222A</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#C8C8D2</color>
-    <color name="text_hint">#9C9CA8</color>
-    <color name="accent">#3D6BFF</color>
-    <color name="accent_text">#9EB6FF</color>
-    <color name="accent_soft">#0E1A40</color>
-    <color name="neutral_soft">#1B1B22</color>
-    <color name="pill_primary">#FFFFFF</color>
-    <color name="on_accent">#FFFFFF</color>
-    <color name="accent_glow">#473D6BFF</color>
-    <color name="row_stroke">#1FFFFFFF</color>
-    <color name="ripple">#26FFFFFF</color>
-    <color name="ripple_on_accent">#33FFFFFF</color>
-    <color name="ok">#4ADE80</color>
-    <color name="bad">#F04848</color>
-    <color name="info">#6AA6FF</color>
-    <color name="ic_launcher_bg">#FF020516</color>
-    <!-- Glass tokens (dark) -->
-    <color name="glass_btn">#26FFFFFF</color>
-    <color name="glass_btn_stroke">#33FFFFFF</color>
-    <color name="glass_row">#1CFFFFFF</color>
-    <color name="glass_sheet">#E81B1B22</color>
-    <color name="glass_sheet_stroke">#38FFFFFF</color>
-    <color name="glass_field">#14FFFFFF</color>
-    <color name="glass_nav_tint">#8C16161C</color>
-    <color name="glass_hi">#66FFFFFF</color>
-    <color name="glass_lo">#14FFFFFF</color>
-    <color name="glass_sheen">#1AFFFFFF</color>
-    <color name="glass_pill">#2EFFFFFF</color>
-    <color name="glass_pill_stroke">#33FFFFFF</color>
-    <color name="glass_snap_tint">#7316161C</color>
-    <color name="glass_sheet_tint">#C0121217</color>
-    <color name="splash_bg">#FF050714</color>
+    <color name="background_light">#000000</color>
+
+    <color name="ripple_brand">#26D97757</color>
+    <color name="edge_glow_brand">#D97757</color>
+
+    <!-- Splash follows system theme — pure black in dark mode. -->
+    <color name="splash_background">#000000</color>
+    <color name="widget_background">#171717</color>
+    <color name="widget_text">#ECECEC</color>
+    <color name="widget_text_secondary">#A6A6A6</color>
+    <color name="widget_accent">#E0AC4F</color>
 </resources>

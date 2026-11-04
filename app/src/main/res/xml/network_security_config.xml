@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FEATURE ADDED: nothing in this app ever legitimately needs a plain-HTTP
+  connection — Firestore (FirebaseModule) is TLS-only, the update manifest
+  (UpdateChecker) always resolves to GitHub's HTTPS API, and ApkDownloader
+  already refuses any apkUrl that isn't "https://" on its own. This file
+  makes that the same guarantee at the OS/network-stack level, app-wide,
+  instead of relying on every individual caller remembering to check.
+  cleartextTrafficPermitted="false" as the base config means any accidental
+  http:// URL anywhere in the app (now or added later) fails to connect
+  outright rather than silently working — turning a future mistake into an
+  immediate, obvious failure instead of an unencrypted request sent over
+  the network. android:usesCleartextTraffic="false" in the manifest is the
+  equivalent top-level switch; this file is the more explicit, inspectable
+  form of the same policy and is what Play Console / security scanners
+  look for.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

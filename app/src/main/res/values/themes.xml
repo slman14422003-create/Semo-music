@@ -1,119 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      UI FIX (startup jitter/flash): before this, MainActivity used the
+      bare `Theme.ShopManager` from the very first frame — meaning the
+      OS's default starting window was blank/white, and only once Compose
+      finished its first composition did SetSystemBarsColor (in
+      MainActivity.kt) repaint the status/nav bars to the brand color.
+      That white→brand-color repaint, landing while Firebase/WorkManager/tier
+      detection were still doing work on the main thread (see
+      AndroidManifest.xml and MainActivity.kt), is what read as the app
+      "shaking" for the first couple of seconds — content and system-bar
+      colors were changing under the user's thumb while the phone was
+      still catching up.
 
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <item name="nAccent">@color/accent</item>
-        <item name="nAccentText">@color/accent_text</item>
-        <item name="nAccentSoft">@color/accent_soft</item>
-        <item name="nAccentGlow">@color/accent_glow</item>
-        <item name="nOnAccent">@color/on_accent</item>
-        <item name="colorPrimary">@color/accent</item>
-        <item name="colorPrimaryDark">@color/bg</item>
-        <item name="colorAccent">?attr/nAccentText</item>
-        <item name="android:windowBackground">@color/bg</item>
-        <item name="android:statusBarColor">@color/bg</item>
-        <item name="android:navigationBarColor">@color/bg</item>
-        <item name="android:windowLightStatusBar">@bool/light_bars</item>
-        <item name="android:windowLightNavigationBar">@bool/light_bars</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
-        <item name="android:textColorHint">@color/text_hint</item>
-        <item name="alertDialogTheme">@style/AppDialog</item>
-        <item name="android:colorBackground">@color/bg</item>
-        <item name="colorControlNormal">@color/text_secondary</item>
-        <item name="colorControlActivated">?attr/nAccentText</item>
-        <item name="android:textColorLink">?attr/nAccentText</item>
-        <item name="android:windowAnimationStyle">@style/ActivityAnim</item>
+      Theme.ShopManager.Splash now shows a static app icon on a flat
+      brand-color background immediately, with nothing to animate or
+      recompose, and stays up (MainActivity controls exactly how long via
+      setKeepOnScreenCondition) until the real first frame is fully ready
+      to show — so the phone never shows a half-finished frame.
+    -->
+    <style name="Theme.ShopManager.Splash" parent="Theme.SplashScreen">
+        <!-- Unified with the Phizyo reference app's own splash — see
+             splash_background's note in colors.xml. -->
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.ShopManager</item>
     </style>
 
-    <style name="ActivityAnim" parent="@android:style/Animation.Activity">
-        <item name="android:activityOpenEnterAnimation">@anim/act_open_enter</item>
-        <item name="android:activityOpenExitAnimation">@anim/act_open_exit</item>
-        <item name="android:activityCloseEnterAnimation">@anim/act_close_enter</item>
-        <item name="android:activityCloseExitAnimation">@anim/act_close_exit</item>
-    </style>
+    <!-- windowBackground now matches the brand color instead of the
+         Material default white: if there's ever a one-frame gap between
+         the splash screen handing off and Compose's first pixel, the
+         background underneath is already the right color instead of a
+         white flash. -->
+    <style name="Theme.ShopManager" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Matches Theme.ShopManager.Splash above so a one-frame gap in
+             the handoff still shows the right tone instead of a flash of
+             the wrong color before the in-app splash's own background
+             paints. -->
+        <item name="android:windowBackground">@color/splash_background</item>
 
-    <style name="AppDialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">
-        <item name="nAccent">@color/accent</item>
-        <item name="nAccentText">@color/accent_text</item>
-        <item name="nAccentSoft">@color/accent_soft</item>
-        <item name="nAccentGlow">@color/accent_glow</item>
-        <item name="nOnAccent">@color/on_accent</item>
-        <item name="colorAccent">?attr/nAccentText</item>
-        <item name="android:windowBackground">@drawable/bg_dialog</item>
-        <item name="android:textColorPrimary">@color/text_primary</item>
-        <item name="android:textColorSecondary">@color/text_secondary</item>
-        <item name="android:backgroundDimAmount">0.42</item>
-        <item name="android:windowAnimationStyle">@style/DialogAnim</item>
-        <item name="windowMinWidthMinor">92%</item>
-        <item name="windowMinWidthMajor">60%</item>
-        <item name="android:windowElevation">0dp</item>
-    </style>
-
-    <style name="DialogAnim" parent="@android:style/Animation.Dialog">
-        <item name="android:windowEnterAnimation">@anim/dlg_in</item>
-        <item name="android:windowExitAnimation">@anim/dlg_out</item>
-    </style>
-
-    <!-- Centered card dialog (rename, confirm): same card, border and pills as the sheets -->
-    <style name="AppCard" parent="Theme.AppCompat.DayNight.Dialog">
-        <item name="nAccent">@color/accent</item>
-        <item name="nAccentText">@color/accent_text</item>
-        <item name="nAccentSoft">@color/accent_soft</item>
-        <item name="nAccentGlow">@color/accent_glow</item>
-        <item name="nOnAccent">@color/on_accent</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsFloating">true</item>
-        <item name="android:backgroundDimAmount">0.42</item>
-        <item name="android:windowAnimationStyle">@style/DialogAnim</item>
-        <item name="android:windowElevation">0dp</item>
-        <item name="android:windowMinWidthMinor">92%</item>
-        <item name="android:windowMinWidthMajor">60%</item>
-    </style>
-
-    <!-- Invisible screens (open-with, delete): no window, no animation -->
-    <style name="Theme.App.Transparent" parent="AppTheme">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
-    <!-- Bottom sheet (song menu, playlists, sort, timer) -->
-    <style name="AppSheet" parent="Theme.AppCompat.DayNight.Dialog">
-        <item name="nAccent">@color/accent</item>
-        <item name="nAccentText">@color/accent_text</item>
-        <item name="nAccentSoft">@color/accent_soft</item>
-        <item name="nAccentGlow">@color/accent_glow</item>
-        <item name="nOnAccent">@color/on_accent</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsFloating">true</item>
-        <item name="android:backgroundDimAmount">0.42</item>
-        <item name="android:windowAnimationStyle">@style/SheetAnim</item>
-        <item name="android:windowElevation">0dp</item>
-        <item name="android:windowMinWidthMajor">100%</item>
-        <item name="android:windowMinWidthMinor">100%</item>
-    </style>
-
-    <style name="SheetAnim" parent="@android:style/Animation.Dialog">
-        <item name="android:windowEnterAnimation">@anim/sheet_in</item>
-        <item name="android:windowExitAnimation">@anim/sheet_out</item>
-    </style>
-
-    <!-- Player screen: translucent so the screen underneath shows while you drag the player down -->
-    <style name="Theme.App.Player" parent="AppTheme">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:backgroundDimEnabled">false</item>
-    </style>
-
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/splash_bg</item>
-        <item name="windowSplashScreenAnimationDuration">900</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
-        <item name="postSplashScreenTheme">@style/AppTheme</item>
+        <!-- Ripple/touch-feedback tint on every tap, and the color of the
+             glow shown at scroll edges/over-scroll — both previously the
+             platform default grey, now tied to the brand palette (see
+             colors.xml) so even the smallest, most frequent touch
+             feedback in the app reads as part of one cohesive design. -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
+        <item name="android:colorControlHighlight">@color/ripple_brand</item>
+        <item name="android:colorEdgeEffect" tools:targetApi="s">@color/edge_glow_brand</item>
     </style>
 </resources>

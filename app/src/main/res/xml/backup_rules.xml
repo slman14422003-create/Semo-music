@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android < 12 (API < 31): تستخدمه android:fullBackupContent في الـ manifest.
+
+  SECURITY FIX: كان يستثني مجلد backups/ فقط، وبالتالي ملفات SharedPreferences
+  التالية كانت تدخل في نسخة Google الاحتياطية وتنتقل لأي جهاز آخر:
+    - shop_manager_settings   (يحوي hash + salt الخاص بالـ PIN)
+    - shop_manager_pin_throttle / shop_manager_admin_throttle (عدّاد المحاولات)
+  hash الـ PIN مكوّن من ٤-٦ أرقام فقط = مليون احتمال على الأكثر، فمن يحصل على
+  النسخة الاحتياطية يكسره offline خلال دقائق. العدّاد المنسوخ يتيح أيضًا
+  تصفير قفل المحاولات باستعادة نسخة قديمة. كلها الآن مستثناة، فيبدأ الجهاز
+  المستعاد بدون PIN (يضبطه المستخدم من جديد) بدل نقل سرّ قابل للكسر.
+  الإعدادات الأخرى غير الحساسة (العملة، السمة...) بتتعيّن من جديد بسهولة،
+  والبيانات الفعلية (ديون/مواد/ملاحظات) أصلاً على Firestore.
+-->
 <full-backup-content>
-    <exclude domain="sharedpref" path="simomusic_secret.xml" />
-    <exclude domain="sharedpref" path="simomusic_stats.xml" />
-    <exclude domain="file" path="whisper" />
+    <exclude domain="file" path="backups/" />
+    <exclude domain="sharedpref" path="shop_manager_settings.xml" />
+    <exclude domain="sharedpref" path="shop_manager_pin_throttle.xml" />
+    <exclude domain="sharedpref" path="shop_manager_admin_throttle.xml" />
 </full-backup-content>

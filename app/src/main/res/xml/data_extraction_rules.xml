@@ -1,12 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ (API 31+): البديل الحديث لـ backup_rules.xml (انظر الشرح هناك
+  لسبب استثناء ملفات الـ PIN). مطبّق على النسخ السحابي ونقل جهاز-لجهاز معًا.
+-->
 <data-extraction-rules>
     <cloud-backup>
-        <exclude domain="sharedpref" path="simomusic_secret.xml" />
-        <exclude domain="sharedpref" path="simomusic_stats.xml" />
-        <exclude domain="file" path="whisper" />
+        <exclude domain="file" path="backups/" />
+        <exclude domain="sharedpref" path="shop_manager_settings.xml" />
+        <exclude domain="sharedpref" path="shop_manager_pin_throttle.xml" />
+        <exclude domain="sharedpref" path="shop_manager_admin_throttle.xml" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="sharedpref" path="simomusic_secret.xml" />
-        <exclude domain="sharedpref" path="simomusic_stats.xml" />
+        <exclude domain="file" path="backups/" />
+        <exclude domain="sharedpref" path="shop_manager_settings.xml" />
+        <exclude domain="sharedpref" path="shop_manager_pin_throttle.xml" />
+        <exclude domain="sharedpref" path="shop_manager_admin_throttle.xml" />
     </device-transfer>
 </data-extraction-rules>

@@ -1,0 +1,21 @@
+مهمة: تحسين سيمو (جودة الرد + البحث + ذكاء محلي أوفلاين)
+التخطيط تم أولاً ثم التنفيذ دفعة واحدة.
+
+ملفات جديدة:
+data/search/SearchTuning.kt - أوزان الدمج قابلة للضبط
+data/search/HybridSearch.kt - دمج SemanticIndex مع SearchEngine + LRU لآخر 50 سؤال + Grounding/SourceRef
+data/search/NameSuggester.kt - هل تقصد (3 أسماء)
+data/search/TextEmbedder.kt - واجهة التضمين القابلة للاستبدال (لا نموذج الآن)
+data/ai/SemoReplyPolicy.kt - تنبيه الطبيب الثابت من الكود + اختصار الرد
+data/ai/local/* - الذكاء المحلي: النماذج، المخزن، التنزيل، المحرك LiteRT-LM، المدير، المتحقق، إعادة الصياغة، اختبار المقارنة (30 سؤالاً)
+ui/screens/settings/LocalAiSettingsSection.kt - قسم الإعدادات
+app/src/test/... - اختبارات JVM (60 سؤالاً + المتحقق + التنبيه)
+
+ملفات معدلة:
+HerbAssistant.kt (dialectNormalize, intentFields, requiresDoctorNotice, verifyReply, recordFeedback, mergeLearnedExamples)
+OnlineAssistant.kt (سجل المحادثة، answerGrounded)
+SemoAssistantScreen.kt (المسار الجديد، المصادر، اشرح أكثر، هل تقصد، البث)
+SemoLearningRepository.kt + firestore.rules (3 أجهزة مختلفة voters)
+SettingsScreen.kt, HerbalNavGraph.kt, HerbalApp.kt (onTrimMemory), build.gradle.kts (litertlm-android:0.18.0 + إعدادات اختبار), proguard-rules.pro
+
+مطلوب بعد الدمج: نشر firestore.rules، ومعايرة minAccuracy في الاختبار بعد أول تشغيل.

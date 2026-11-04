@@ -1,0 +1,218 @@
+rules_version = '2';
+
+// قواعد Firestore المتقدمة — تطبيق إدارة المحل (مشروع shop-app-6d35e).
+//
+// ملاحظة مهمة: التطبيق لا يستخدم Firebase Auth، فلا يمكن ربط الصلاحيات بمستخدم.
+// لذلك تعتمد الحماية هنا على: قائمة حقول مسموحة لكل مجموعة، فحص الأنواع والأحجام والحدود،
+// منع تعديل الحقول الثابتة (createdAt, personId…)، قيود زمنية على أحداث الذكاء،
+// ومنع كل ما عدا ذلك. (لإغلاق القراءة/الكتابة على المستخدمين المسجّلين فقط يلزم
+// تفعيل Anonymous Auth في التطبيق ثم استبدال `if true` بـ `request.auth != null`.)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───────────── دوال مساعدة ─────────────
+
+    function reqStr(d, f, min, max) {
+      return f in d && d[f] is string && d[f].size() >= min && d[f].size() <= max;
+    }
+    function optStr(d, f, max) {
+      return !(f in d) || (d[f] is string && d[f].size() <= max);
+    }
+    function reqNum(d, f, min, max) {
+      return f in d && d[f] is number && d[f] >= min && d[f] <= max;
+    }
+    function optNum(d, f, min, max) {
+      return !(f in d) || (d[f] is number && d[f] >= min && d[f] <= max);
+    }
+    function optBool(d, f) {
+      return !(f in d) || d[f] is bool;
+    }
+    // الحقول التي تغيّرت فعلاً في هذا التعديل (لا تعتمد على حقول قديمة في الوثيقة).
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ───────────── الديون: العملاء ─────────────
+    match /persons/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['name', 'amount', 'date', 'phone', 'createdAt', 'dueDate', 'installments'])
+                    && request.resource.data.keys().hasAll(['name', 'amount', 'date', 'createdAt'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'amount', -1000000000000, 1000000000000)
+                    && optStr(request.resource.data, 'date', 40)
+                    && optStr(request.resource.data, 'phone', 40)
+                    && reqNum(request.resource.data, 'createdAt', 0, 9999999999999)
+                    && optNum(request.resource.data, 'dueDate', 0, 9999999999999)
+                    && (!('installments' in request.resource.data)
+                        || (request.resource.data.installments is list
+                            && request.resource.data.installments.size() <= 60));
+      allow update: if changedOnly(['name', 'amount', 'date', 'phone', 'dueDate', 'installments'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'amount', -1000000000000, 1000000000000)
+                    && optStr(request.resource.data, 'date', 40)
+                    && optStr(request.resource.data, 'phone', 40)
+                    && optNum(request.resource.data, 'dueDate', 0, 9999999999999)
+                    && (!('installments' in request.resource.data)
+                        || (request.resource.data.installments is list
+                            && request.resource.data.installments.size() <= 60));
+    }
+
+    // ───────────── الديون: القيود ─────────────
+    match /debts/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(['personId', 'amount', 'date', 'note', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['personId', 'amount', 'date', 'createdAt'])
+                    && reqStr(request.resource.data, 'personId', 1, 100)
+                    && reqNum(request.resource.data, 'amount', -1000000000000, 1000000000000)
+                    && optStr(request.resource.data, 'date', 40)
+                    && optStr(request.resource.data, 'note', 2000)
+                    && reqNum(request.resource.data, 'createdAt', 0, 9999999999999);
+      // personId و createdAt ثابتان: لا يُنقل دين لعميل آخر ولا يتغير تاريخ إنشائه.
+      allow update: if changedOnly(['amount', 'date', 'note'])
+                    && reqNum(request.resource.data, 'amount', -1000000000000, 1000000000000)
+                    && optStr(request.resource.data, 'date', 40)
+                    && optStr(request.resource.data, 'note', 2000);
+    }
+
+    // ───────────── سجل عمليات الديون ─────────────
+    match /debt_activity/{id} {
+      allow read: if true;
+      allow delete: if true; // زر "مسح السجل"
+      allow create: if request.resource.data.keys().hasOnly(['kind', 'person', 'amount', 'device', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['kind', 'person', 'createdAt'])
+                    && request.resource.data.kind in
+                         ['ADDED', 'NEW_CUSTOMER', 'PAID', 'PAID_ALL', 'EDITED', 'DELETED', 'DELETED_CUSTOMER', 'UNDO']
+                    && optStr(request.resource.data, 'person', 200)
+                    && optStr(request.resource.data, 'device', 100)
+                    && optNum(request.resource.data, 'amount', -1000000000000, 1000000000000)
+                    && reqNum(request.resource.data, 'createdAt', 0, 9999999999999);
+      allow update: if false; // السجل لا يُعدَّل
+    }
+
+    // ───────────── المواد: قائمة النواقص ─────────────
+    match /spices_final_v12/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['name', 'quantity', 'unit', 'section', 'notes', 'timestamp', 'important', 'order'])
+                    && request.resource.data.keys().hasAll(['name', 'quantity', 'unit', 'section'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'quantity', 0, 10000000)
+                    && optStr(request.resource.data, 'unit', 40)
+                    && optStr(request.resource.data, 'section', 100)
+                    && optStr(request.resource.data, 'notes', 2000)
+                    && optNum(request.resource.data, 'timestamp', 0, 9999999999999)
+                    && optNum(request.resource.data, 'order', -9999999999999, 9999999999999)
+                    && optBool(request.resource.data, 'important');
+      allow update: if changedOnly(['name', 'quantity', 'unit', 'section', 'notes', 'timestamp', 'important', 'order'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'quantity', 0, 10000000)
+                    && optStr(request.resource.data, 'unit', 40)
+                    && optStr(request.resource.data, 'section', 100)
+                    && optStr(request.resource.data, 'notes', 2000)
+                    && optNum(request.resource.data, 'timestamp', 0, 9999999999999)
+                    && optNum(request.resource.data, 'order', -9999999999999, 9999999999999)
+                    && optBool(request.resource.data, 'important');
+    }
+
+    match /material_prices/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(['name', 'price'])
+                    && request.resource.data.keys().hasAll(['name', 'price'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'price', 0, 1000000000);
+      allow update: if changedOnly(['name', 'price'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && reqNum(request.resource.data, 'price', 0, 1000000000);
+    }
+
+    match /materials_catalog/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(['name', 'group'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && optStr(request.resource.data, 'group', 80);
+      allow update: if changedOnly(['name', 'group'])
+                    && reqStr(request.resource.data, 'name', 1, 200)
+                    && optStr(request.resource.data, 'group', 80);
+    }
+
+    // ───────────── أحداث الذكاء المحلي المشتركة ─────────────
+    // t: a إضافة | r صارت متوفرة | e موجودة | s تخطّي | i أهمية | m إعادة تسمية.
+    // الأحداث لا تُعدَّل. الوقت يجب أن يكون معقولاً مقارنةً بوقت الخادم (لا أحداث من المستقبل
+    // ولا أقدم من 400 يوماً)، ومعرّف الوثيقة بصيغة التطبيق الحتمية فتكرار الحدث لا يضاعفه.
+    // الحذف مسموح فقط للأحداث الأقدم من 390 يوماً (التنظيف الدوري) فلا يمكن مسح التعلّم.
+    match /ai_events/{id} {
+      allow read: if true;
+      allow create: if id.matches('[0-9]+_[a-z]_[0-9a-f]+_[0-9]+')
+                    && request.resource.data.keys().hasOnly(['t', 'k', 'n', 'ts', 'q', 'u', 'i', 'b', 'to', 'c'])
+                    && request.resource.data.keys().hasAll(['t', 'k', 'n', 'ts'])
+                    && request.resource.data.t in ['a', 'r', 'e', 's', 'i', 'm']
+                    && reqStr(request.resource.data, 'k', 1, 200)
+                    && reqStr(request.resource.data, 'n', 0, 200)
+                    && request.resource.data.ts is int
+                    && request.resource.data.ts <= request.time.toMillis() + 86400000
+                    && request.resource.data.ts >= request.time.toMillis() - 34560000000
+                    && optNum(request.resource.data, 'q', 0, 100000)
+                    && optStr(request.resource.data, 'u', 40)
+                    && optBool(request.resource.data, 'i')
+                    && optStr(request.resource.data, 'b', 60)
+                    && optStr(request.resource.data, 'to', 200)
+                    && optNum(request.resource.data, 'c', 1, 1000);
+      allow update: if false;
+      allow delete: if resource.data.ts < request.time.toMillis() - 33696000000;
+    }
+
+    // ───────────── الملاحظات ─────────────
+    match /important_notes/{id} {
+      allow read: if true;
+      allow delete: if true;
+      allow create: if request.resource.data.keys().hasOnly(
+                         ['title', 'content', 'linkType', 'linkedId', 'linkedName', 'reminderAt', 'isPinned', 'isDone', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['title', 'content'])
+                    && reqStr(request.resource.data, 'title', 0, 300)
+                    && reqStr(request.resource.data, 'content', 0, 20000)
+                    && optStr(request.resource.data, 'linkType', 30)
+                    && optStr(request.resource.data, 'linkedId', 100)
+                    && optStr(request.resource.data, 'linkedName', 200)
+                    && optNum(request.resource.data, 'reminderAt', 0, 9999999999999)
+                    && optNum(request.resource.data, 'createdAt', 0, 9999999999999)
+                    && optBool(request.resource.data, 'isPinned')
+                    && optBool(request.resource.data, 'isDone');
+      allow update: if changedOnly(['title', 'content', 'linkType', 'linkedId', 'linkedName', 'reminderAt', 'isPinned', 'isDone'])
+                    && reqStr(request.resource.data, 'title', 0, 300)
+                    && reqStr(request.resource.data, 'content', 0, 20000)
+                    && optStr(request.resource.data, 'linkType', 30)
+                    && optStr(request.resource.data, 'linkedId', 100)
+                    && optStr(request.resource.data, 'linkedName', 200)
+                    && optNum(request.resource.data, 'reminderAt', 0, 9999999999999)
+                    && optBool(request.resource.data, 'isPinned')
+                    && optBool(request.resource.data, 'isDone');
+    }
+
+    // ───────────── الإعدادات ─────────────
+    // config/admin (كلمة مرور لوحة المطوّر): التطبيق يقرؤها فقط، والتعديل من الكونسول.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // app_config/update: مفتاح "إظهار التحديث الاختياري" يكتبه التطبيق من لوحة المسؤول.
+    match /app_config/{doc} {
+      allow read: if true;
+      allow create, update: if doc == 'update'
+                            && request.resource.data.keys().hasOnly(['optionalUpdateEnabled'])
+                            && request.resource.data.optionalUpdateEnabled is bool;
+      allow delete: if false;
+    }
+
+    // أي مجموعة أخرى مرفوضة.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -127,12 +127,8 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         cn.setPaddingRelative(Ui.dp(this, 8), 0, 0, 0);
         chip.addView(cn);
         top.addView(chip);
-        final float side = getResources().getConfiguration().getLayoutDirection() == View.LAYOUT_DIRECTION_RTL ? -1f : 1f;
-        chip.setTranslationX(side * Ui.dp(this, 14));   // nudged right
         top.addView(Ui.space(this, 1f), new LinearLayout.LayoutParams(1, 1, 1f));
-        View closeBtn = Ui.icon(this, R.drawable.ic_close, R.string.close, v -> finish());
-        closeBtn.setTranslationX(side * Ui.dp(this, 10));   // nudged right as well
-        top.addView(closeBtn);
+        top.addView(Ui.icon(this, R.drawable.ic_close, R.string.close, v -> finish()));
         topRow = top;
         content.addView(top, Ui.lp(-1, -2));
 
@@ -228,8 +224,22 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(content, (v, insets) -> {
             androidx.core.graphics.Insets b = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
             androidx.core.graphics.Insets cut = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.displayCutout());
-            v.setPadding(pl + Math.max(b.left, cut.left), pt + b.top, pr + Math.max(b.right, cut.right),
-                    pb + Math.max(b.bottom, cut.bottom));
+            // rounded screen corners (and water-drop notches) clip anything that sits too close to them: keep the top row
+            // inside the curve, using the real corner radius when the system reports it
+            int corner = 0;
+            if (Build.VERSION.SDK_INT >= 31) {
+                android.view.WindowInsets wi = insets.toWindowInsets();
+                if (wi != null) {
+                    android.view.RoundedCorner tl = wi.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_LEFT);
+                    android.view.RoundedCorner tr = wi.getRoundedCorner(android.view.RoundedCorner.POSITION_TOP_RIGHT);
+                    corner = Math.max(tl == null ? 0 : tl.getRadius(), tr == null ? 0 : tr.getRadius());
+                }
+            }
+            if (corner == 0) corner = Ui.dp(LockActivity.this, 28);   // older phones: assume a normal curve
+            int extraTop = Math.round(corner * 0.34f);
+            int extraSide = Math.round(corner * 0.22f);
+            v.setPadding(pl + extraSide + Math.max(b.left, cut.left), pt + extraTop + b.top,
+                    pr + extraSide + Math.max(b.right, cut.right), pb + Math.max(b.bottom, cut.bottom));
             return insets;
         });
         androidx.core.view.ViewCompat.requestApplyInsets(content);

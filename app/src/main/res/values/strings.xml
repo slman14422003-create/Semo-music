@@ -397,6 +397,10 @@
     <string name="lyrics_size_m">Medium</string>
     <string name="lyrics_size_l">Large</string>
     <string name="lyrics_estimated">Estimated sync. Tap the line being sung to correct it, long-press a line to jump to it</string>
+    <string name="lyrics_offset_earlier">Show lyrics earlier (+0.25 s)</string>
+    <string name="lyrics_offset_later">Show lyrics later (−0.25 s)</string>
+    <string name="lyrics_offset_reset">Reset lyrics timing</string>
+    <string name="lyrics_offset_now">Timing: %+.2f s</string>
     <string name="lyrics_adjusted">Sync adjusted</string>
     <string name="ai_sync_tap">Tap to sync with AI</string>
     <string name="ai_sync_download_q">Syncing with AI needs a one-time download of a speech model (about %1$d MB). Download it now?</string>

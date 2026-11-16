@@ -421,6 +421,10 @@
     <string name="lyrics_size_m">متوسط</string>
     <string name="lyrics_size_l">كبير</string>
     <string name="lyrics_estimated">تزامن تقديري. اضغط على السطر الذي يُغنّى الآن لتصحيحه، واضغط مطولاً على سطر للانتقال إليه</string>
+    <string name="lyrics_offset_earlier">إظهار الكلمات أبكر (+0.25 ث)</string>
+    <string name="lyrics_offset_later">إظهار الكلمات أبطأ (−0.25 ث)</string>
+    <string name="lyrics_offset_reset">إعادة ضبط توقيت الكلمات</string>
+    <string name="lyrics_offset_now">التوقيت: %+.2f ث</string>
     <string name="lyrics_adjusted">تم ضبط التزامن</string>
     <string name="ai_sync_tap">اضغط للمزامنة بالذكاء الاصطناعي</string>
     <string name="ai_sync_download_q">المزامنة بالذكاء الاصطناعي تحتاج تنزيل نموذج صوتي مرة واحدة (حوالي %1$d ميغابايت). تنزيله الآن؟</string>

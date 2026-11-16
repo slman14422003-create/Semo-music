@@ -470,4 +470,12 @@
     <string name="icon_gold">ذهبي</string>
     <string name="icon_midnight">أزرق ليلي</string>
     <string name="icon_charcoal">رمادي داكن</string>
+    <string name="volume_title">الصوت</string>
+    <string name="volume_row_sub">المستوى وتضخيم الصوت حتى 200%</string>
+    <string name="volume_level">المستوى</string>
+    <string name="volume_boost_hint">فوق 100% يُضخَّم الصوت برمجياً، وقد يظهر تشويه خفيف في الأغاني العالية جداً</string>
+    <string name="boost_title">تضخيم الصوت</string>
+    <string name="boost_sub">تجاوز الحد الأقصى للنظام حتى 200% مثل VLC</string>
+    <string name="own_volume_title">شريط صوت التطبيق</string>
+    <string name="own_volume_sub">يحل مكان شريط صوت النظام أثناء فتح التطبيق</string>
 </resources>

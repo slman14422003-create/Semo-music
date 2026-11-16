@@ -446,4 +446,12 @@
     <string name="icon_gold">Gold</string>
     <string name="icon_midnight">Midnight blue</string>
     <string name="icon_charcoal">Dark gray</string>
+    <string name="volume_title">Volume</string>
+    <string name="volume_row_sub">Level and volume boost up to 200%</string>
+    <string name="volume_level">Level</string>
+    <string name="volume_boost_hint">Above 100% the sound is amplified by software; very loud tracks may distort a little</string>
+    <string name="boost_title">Volume boost</string>
+    <string name="boost_sub">Go past the system maximum, up to 200%, like VLC</string>
+    <string name="own_volume_title">App volume bar</string>
+    <string name="own_volume_sub">Replaces the system volume panel while the app is open</string>
 </resources>

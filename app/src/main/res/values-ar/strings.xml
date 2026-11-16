@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SimoMusic</string>
+    <string name="app_name">Music</string>
 
     <!-- general -->
     <string name="back">رجوع</string>
@@ -38,7 +38,7 @@
     <string name="shuffle_all">عشوائي</string>
     <string name="scanning">جارٍ فحص المكتبة…</string>
     <string name="no_songs">لا توجد أغانٍ. تأكد من الصيغ المفعّلة في الإعدادات.</string>
-    <string name="no_access">يحتاج SimoMusic إلى الوصول إلى الموسيقى على جهازك.</string>
+    <string name="no_access">يحتاج Music إلى الوصول إلى الموسيقى على جهازك.</string>
     <string name="allow_access">السماح بالوصول</string>
     <string name="finish_setup">أكمل الأذونات</string>
     <string name="finish_setup_sub">لتعمل الإشعارات وشاشة القفل بسلاسة</string>
@@ -147,9 +147,9 @@
     <string name="perm_xiaomi">شاومي: العرض على شاشة القفل</string>
     <string name="perm_xiaomi_sub">فعّل «عرض على شاشة القفل» و«النوافذ المنبثقة في الخلفية» و«الإشعارات العائمة»</string>
     <string name="perm_autostart">شاومي: التشغيل التلقائي</string>
-    <string name="perm_autostart_sub">اسمح لتطبيق SimoMusic بالتشغيل التلقائي لتبقى أزرار التحكم تعمل</string>
+    <string name="perm_autostart_sub">اسمح لتطبيق Music بالتشغيل التلقائي لتبقى أزرار التحكم تعمل</string>
     <string name="perm_battery_oem">البطارية: بلا قيود</string>
-    <string name="perm_battery_oem_sub">اجعل SimoMusic «بلا قيود» (شاومي) أو «غير مقيّد» / لا ينام أبدًا (سامسونج)</string>
+    <string name="perm_battery_oem_sub">اجعل Music «بلا قيود» (شاومي) أو «غير مقيّد» / لا ينام أبدًا (سامسونج)</string>
     <string name="lock_test">اختبار مشغّل شاشة القفل</string>
     <string name="lock_test_sub">اضغط ثم اقفل هاتفك — سيظهر المشغّل خلال 6 ثوانٍ</string>
     <string name="lock_test_toast">اقفل هاتفك الآن…</string>
@@ -300,10 +300,10 @@
     <string name="delete_failed">تعذّر حذف الأغنية</string>
     <string name="open_failed">تعذّر فتح هذا الملف الصوتي</string>
     <string name="default_app">تطبيق الموسيقى الافتراضي</string>
-    <string name="default_app_sub">افتح ملفات الصوت بتطبيق SimoMusic</string>
+    <string name="default_app_sub">افتح ملفات الصوت بتطبيق Music</string>
     <string name="default_pick_files">اختيار لملفات الصوت</string>
     <string name="default_settings">إعدادات التطبيقات الافتراضية</string>
-    <string name="default_hint">اختر SimoMusic ثم اضغط «دائماً»</string>
+    <string name="default_hint">اختر Music ثم اضغط «دائماً»</string>
     <string name="default_no_song">انتظر حتى تُحمَّل أغانيك</string>
     <string name="ch_playback">قيد التشغيل</string>
     <string name="grp_title">الاستماع الجماعي</string>
@@ -337,13 +337,13 @@
     <string name="upd_install">تثبيت</string>
     <string name="upd_retry">حاول مجدداً</string>
     <string name="upd_check_again">افحص مجدداً</string>
-    <string name="upd_perm">اسمح لـ SimoMusic بتثبيت التحديثات</string>
+    <string name="upd_perm">اسمح لـ Music بتثبيت التحديثات</string>
     <string name="upd_perm_sub">يطلب أندرويد هذا مرة واحدة. فعّله ثم ارجع واضغط تثبيت.</string>
     <string name="upd_perm_btn">فتح الإعداد</string>
     <string name="upd_err_none">لا يوجد إصدار منشور يحتوي على ملف apk بعد.</string>
     <string name="upd_err_net">تعذّر الوصول إلى GitHub. تحقق من الإنترنت وحاول مجدداً.</string>
     <string name="upd_err_limit">GitHub يحدّ الطلبات حالياً. حاول بعد دقائق.</string>
-    <string name="upd_err_file">الملف الذي نُزّل ليس تحديثاً صالحاً لـ SimoMusic.</string>
+    <string name="upd_err_file">الملف الذي نُزّل ليس تحديثاً صالحاً لـ Music.</string>
     <!-- multi-select delete -->
     <plurals name="selected_n">
         <item quantity="zero">لا شيء محدد</item>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">SimoMusic</string>
+    <string name="app_name">Music</string>
 
     <!-- general -->
     <string name="back">Back</string>
@@ -30,7 +30,7 @@
     <string name="shuffle_all">Shuffle</string>
     <string name="scanning">Scanning your library…</string>
     <string name="no_songs">No songs found. Check the enabled formats in Settings.</string>
-    <string name="no_access">SimoMusic needs access to the music on your device.</string>
+    <string name="no_access">Music needs access to the music on your device.</string>
     <string name="allow_access">Allow access</string>
     <string name="finish_setup">Finish setup</string>
     <string name="finish_setup_sub">So notifications and the lock screen work smoothly</string>
@@ -135,9 +135,9 @@
     <string name="perm_xiaomi">Xiaomi: show on lock screen</string>
     <string name="perm_xiaomi_sub">Turn on “Show on lock screen”, “Display pop-up windows while running in the background” and floating notifications</string>
     <string name="perm_autostart">Xiaomi: autostart</string>
-    <string name="perm_autostart_sub">Allow SimoMusic to start itself so playback controls survive</string>
+    <string name="perm_autostart_sub">Allow Music to start itself so playback controls survive</string>
     <string name="perm_battery_oem">Battery: no restrictions</string>
-    <string name="perm_battery_oem_sub">Set SimoMusic to “No restrictions” (Xiaomi) or “Unrestricted” / never sleeping (Samsung)</string>
+    <string name="perm_battery_oem_sub">Set Music to “No restrictions” (Xiaomi) or “Unrestricted” / never sleeping (Samsung)</string>
     <string name="lock_test">Test the lock-screen player</string>
     <string name="lock_test_sub">Tap, then lock your phone — the player appears in 6 seconds</string>
     <string name="lock_test_toast">Lock your phone now…</string>
@@ -288,10 +288,10 @@
     <string name="delete_failed">Could not delete the song</string>
     <string name="open_failed">Could not open this audio file</string>
     <string name="default_app">Default music app</string>
-    <string name="default_app_sub">Open audio files with SimoMusic</string>
+    <string name="default_app_sub">Open audio files with Music</string>
     <string name="default_pick_files">Choose for audio files</string>
     <string name="default_settings">Default apps settings</string>
-    <string name="default_hint">Pick SimoMusic, then tap Always</string>
+    <string name="default_hint">Pick Music, then tap Always</string>
     <string name="default_no_song">Wait until your songs are loaded</string>
     <string name="ch_playback">Now playing</string>
     <string name="grp_title">Group listening</string>
@@ -325,13 +325,13 @@
     <string name="upd_install">Install</string>
     <string name="upd_retry">Try again</string>
     <string name="upd_check_again">Check again</string>
-    <string name="upd_perm">Allow SimoMusic to install updates</string>
+    <string name="upd_perm">Allow Music to install updates</string>
     <string name="upd_perm_sub">Android asks for this once. Turn it on, come back, then tap Install.</string>
     <string name="upd_perm_btn">Open the setting</string>
     <string name="upd_err_none">No published release with an apk was found yet.</string>
     <string name="upd_err_net">Could not reach GitHub. Check your internet connection and try again.</string>
     <string name="upd_err_limit">GitHub is limiting requests right now. Try again in a few minutes.</string>
-    <string name="upd_err_file">The downloaded file is not a valid SimoMusic update.</string>
+    <string name="upd_err_file">The downloaded file is not a valid Music update.</string>
     <!-- multi-select delete -->
     <plurals name="selected_n">
         <item quantity="one">%d selected</item>

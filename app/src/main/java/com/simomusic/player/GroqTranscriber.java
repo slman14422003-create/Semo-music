@@ -50,12 +50,31 @@ public final class GroqTranscriber {
         return b.array();
     }
 
+    private static final String[] MODELS = {"whisper-large-v3-turbo", "whisper-large-v3"};
+    private static volatile int modelIdx = 0;
+
     private static JSONObject call(String apiKey, short[] pcm, int from, int to, String lang, String prompt, boolean words) throws IOException {
+        ApiException miss = null;
+        for (int m = 0; m < MODELS.length; m++) {
+            int idx = (modelIdx + m) % MODELS.length;
+            try {
+                JSONObject o = callModel(MODELS[idx], apiKey, pcm, from, to, lang, prompt, words);
+                modelIdx = idx;
+                return o;
+            } catch (ApiException e) {
+                if (e.code != 404 && e.code != 400) throw e;
+                miss = e;
+            }
+        }
+        throw miss != null ? miss : new IOException("failed");
+    }
+
+    private static JSONObject callModel(String model, String apiKey, short[] pcm, int from, int to, String lang, String prompt, boolean words) throws IOException {
         IOException last = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             MultipartBody.Builder mb = new MultipartBody.Builder().setType(MultipartBody.FORM)
                     .addFormDataPart("file", "song.wav", RequestBody.create(wav(pcm, from, to), MediaType.parse("audio/wav")))
-                    .addFormDataPart("model", "whisper-large-v3")
+                    .addFormDataPart("model", model)
                     .addFormDataPart("response_format", "verbose_json")
                     .addFormDataPart("timestamp_granularities[]", words ? "word" : "segment")
                     .addFormDataPart("temperature", "0");
@@ -88,7 +107,12 @@ public final class GroqTranscriber {
                         continue;
                     }
                 }
-                throw new ApiException(code, "http " + code);
+                String detail = "";
+                try {
+                    detail = new JSONObject(body).getJSONObject("error").optString("message", "");
+                } catch (Exception ignored) {
+                }
+                throw new ApiException(code, detail.isEmpty() ? "http " + code : "http " + code + ": " + detail);
             } catch (org.json.JSONException e) {
                 throw new IOException("bad response", e);
             } catch (ApiException e) {

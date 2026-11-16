@@ -133,7 +133,7 @@ public final class CrashGuard {
         File f = new File(app.getFilesDir(), FILE);
         StringBuilder sb = new StringBuilder();
         sb.append("==== ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date())).append("  ").append(title).append('\n');
-        sb.append("SimoMusic ").append(version()).append(" | Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT)
+        sb.append("Music ").append(version()).append(" | Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT)
                 .append(") | ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
         sb.append(body).append('\n');
         try (FileOutputStream o = new FileOutputStream(f, true)) {
@@ -181,7 +181,7 @@ public final class CrashGuard {
         String r = report(c);
         if (r.isEmpty()) return;
         Intent i = new Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "SimoMusic crash report").putExtra(Intent.EXTRA_TEXT, r);
+                .putExtra(Intent.EXTRA_SUBJECT, "Music crash report").putExtra(Intent.EXTRA_TEXT, r);
         Ui.go(c, Intent.createChooser(i, c.getString(R.string.crash_share)));
     }
 

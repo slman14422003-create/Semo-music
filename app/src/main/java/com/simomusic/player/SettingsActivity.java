@@ -26,7 +26,7 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
     private View appearanceCard() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setBackgroundResource(R.drawable.bg_card);
+        card.setBackground(IosUi.cardBg(this));
         card.setPadding(Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16));
 
         TextView t1 = Ui.text(this, getString(R.string.theme_mode), 15, R.color.text_secondary);
@@ -146,7 +146,10 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
         super.onCreate(b);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.addView(Ui.topBar(this, getString(R.string.settings), R.drawable.ic_back));
+        LinearLayout backRow = new LinearLayout(this);
+        backRow.setPadding(Ui.dp(this, 8), Ui.dp(this, 8), Ui.dp(this, 8), 0);
+        backRow.addView(Ui.icon(this, R.drawable.ic_back, R.string.back, v -> finish()));
+        root.addView(backRow);
         ScrollView sv = new ScrollView(this);
         sv.setOverScrollMode(View.OVER_SCROLL_NEVER);
         LinearLayout col = new LinearLayout(this);
@@ -192,26 +195,26 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
             });
         }
 
-        // ---- appearance
-        col.addView(Ui.section(this, R.string.set_appearance));
+        col.addView(IosUi.title(this, getString(R.string.settings)));
+        col.addView(IosUi.section(this, R.string.set_appearance));
         col.addView(appearanceCard());
 
         // ---- general
-        col.addView(Ui.section(this, R.string.set_general));
+        col.addView(IosUi.section(this, R.string.set_general));
         LinearLayout gen = group(col);
-        gen.addView(Ui.settingRow(this, R.drawable.ic_language, getString(R.string.language), langLabel(), null, false, v -> pickLang()));
-        gen.addView(Ui.settingRow(this, R.drawable.ic_play, getString(R.string.default_app), getString(R.string.default_app_sub), null, false, v -> pickDefault()));
-        gen.addView(Ui.settingRow(this, R.drawable.ic_music, getString(R.string.app_icon), getString(IconSwitcher.NAME[IconSwitcher.current(this)]), null, false,
+        gen.addView(IosUi.row(this, R.drawable.ic_language, getString(R.string.language), langLabel(), null, false, v -> pickLang()));
+        gen.addView(IosUi.row(this, R.drawable.ic_play, getString(R.string.default_app), getString(R.string.default_app_sub), null, false, v -> pickDefault()));
+        gen.addView(IosUi.row(this, R.drawable.ic_music, getString(R.string.app_icon), getString(IconSwitcher.NAME[IconSwitcher.current(this)]), null, false,
                 v -> Ui.go(this, new android.content.Intent(this, IconActivity.class))));
-        gen.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.upd_title),
+        gen.addView(IosUi.row(this, R.drawable.ic_refresh, getString(R.string.upd_title),
                 getString(R.string.upd_row_sub, Updater.current(this)), null, false, v -> UpdateSheet.show(this)));
-        Ui.group(this, gen);
+        IosUi.group(this, gen);
 
         final java.util.ArrayDeque<Runnable> steps = new java.util.ArrayDeque<>();
 
         // ---- formats
         steps.add(() -> {
-        col.addView(Ui.section(this, R.string.set_formats));
+        col.addView(IosUi.section(this, R.string.set_formats));
         LinearLayout fm = group(col);
         String[] names = getResources().getStringArray(R.array.fmt_names);
         String[] subs = getResources().getStringArray(R.array.fmt_subs);
@@ -228,14 +231,14 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
         }));
         col.addView(new View(this), new LinearLayout.LayoutParams(1, Ui.dp(this, 10)));
         LinearLayout lib = group(col);
-        lib.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.set_min_dur), minLabel(), null, false, v -> pickMin()));
-        lib.addView(Ui.toggleRow(this, getString(R.string.smart_filter), getString(R.string.smart_filter_sub),
+        lib.addView(IosUi.row(this, R.drawable.ic_timer, getString(R.string.set_min_dur), minLabel(), null, false, v -> pickMin()));
+        lib.addView(IosUi.toggle(this, getString(R.string.smart_filter), getString(R.string.smart_filter_sub),
                 Store.smartFilter(this), (v, on) -> {
                     Store.setFlag(this, "smart_filter", on);
                     Library.scan(this, null);
                 }));
-        lib.addView(Ui.settingRow(this, R.drawable.ic_folder, getString(R.string.hide_folders), hiddenLabel(), null, false, v -> pickHiddenFolders()));
-        lib.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.rescan), getString(R.string.rescan_sub), null, false, v -> {
+        lib.addView(IosUi.row(this, R.drawable.ic_folder, getString(R.string.hide_folders), hiddenLabel(), null, false, v -> pickHiddenFolders()));
+        lib.addView(IosUi.row(this, R.drawable.ic_refresh, getString(R.string.rescan), getString(R.string.rescan_sub), null, false, v -> {
             Library.scan(this, () -> {
                 if (isFinishing() || isDestroyed()) return;
                 Ui.toast(this, getResources().getQuantityString(R.plurals.songs_n, Library.tracks.size(), Library.tracks.size()));
@@ -243,71 +246,71 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
             dirty = false;
         }));
         if (CrashGuard.has(this)) {
-            lib.addView(Ui.settingRow(this, R.drawable.ic_info, getString(R.string.crash_row), getString(R.string.crash_row_sub), null, false,
+            lib.addView(IosUi.row(this, R.drawable.ic_info, getString(R.string.crash_row), getString(R.string.crash_row_sub), null, false,
                     v -> CrashGuard.share(this)));
         }
-        Ui.group(this, lib);
+        IosUi.group(this, lib);
 
         });
 
         // ---- local AI
         steps.add(() -> {
-        col.addView(Ui.section(this, R.string.set_ai));
+        col.addView(IosUi.section(this, R.string.set_ai));
         LinearLayout ai = group(col);
-        ai.addView(Ui.toggleRow(this, getString(R.string.ai_enable), getString(R.string.ai_enable_sub),
+        ai.addView(IosUi.toggle(this, getString(R.string.ai_enable), getString(R.string.ai_enable_sub),
                 Store.aiEnabled(this), (v, on) -> {
                     Store.setAiEnabled(this, on);
                     if (on) AiEngine.generate(this);
                     recreate();
                 }));
         if (Store.aiEnabled(this)) {
-            ai.addView(Ui.settingRow(this, R.drawable.ic_refresh, getString(R.string.ai_regenerate), getString(R.string.ai_regenerate_sub),
+            ai.addView(IosUi.row(this, R.drawable.ic_refresh, getString(R.string.ai_regenerate), getString(R.string.ai_regenerate_sub),
                     null, false, v -> {
                         AiEngine.generate(this);
                         Ui.toast(this, R.string.ai_regenerated);
                     }));
         }
-        Ui.group(this, ai);
+        IosUi.group(this, ai);
 
         });
 
         // ---- playback
         steps.add(() -> {
-        col.addView(Ui.section(this, R.string.set_playback));
+        col.addView(IosUi.section(this, R.string.set_playback));
         LinearLayout pb = group(col);
-        pb.addView(Ui.settingRow(this, R.drawable.ic_volume, getString(R.string.volume_title), getString(R.string.volume_row_sub),
+        pb.addView(IosUi.row(this, R.drawable.ic_volume, getString(R.string.volume_title), getString(R.string.volume_row_sub),
                 VolumeHud.label(this), false, v -> VolumeSheet.show(this)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.boost_title), getString(R.string.boost_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.boost_title), getString(R.string.boost_sub),
                 Store.boostOn(this), (v, on) -> Store.setFlag(this, "boost_on", on)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.own_volume_title), getString(R.string.own_volume_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.own_volume_title), getString(R.string.own_volume_sub),
                 Store.ownVolume(this), (v, on) -> Store.setFlag(this, "own_volume", on)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.skip_silence), getString(R.string.skip_silence_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.skip_silence), getString(R.string.skip_silence_sub),
                 Store.flag(this, "skip_silence", false), (v, on) -> Store.setFlag(this, "skip_silence", on)));
-        pb.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.crossfade_title), getString(R.string.crossfade_sub),
+        pb.addView(IosUi.row(this, R.drawable.ic_timer, getString(R.string.crossfade_title), getString(R.string.crossfade_sub),
                 crossfadeLabel(), false, v -> pickCrossfade()));
-        pb.addView(Ui.toggleRow(this, getString(R.string.sleep_shake_title), getString(R.string.sleep_shake_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.sleep_shake_title), getString(R.string.sleep_shake_sub),
                 Store.flag(this, "sleep_shake", true), (v, on) -> Store.setFlag(this, "sleep_shake", on)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.autoplay_title), getString(R.string.autoplay_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.autoplay_title), getString(R.string.autoplay_sub),
                 Store.autoplay(this), (v, on) -> Store.setFlag(this, "autoplay", on)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.resume_title), getString(R.string.resume_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.resume_title), getString(R.string.resume_sub),
                 Store.flag(this, "resume", true), (v, on) -> Store.setFlag(this, "resume", on)));
-        pb.addView(Ui.toggleRow(this, getString(R.string.stop_close_title), getString(R.string.stop_close_sub),
+        pb.addView(IosUi.toggle(this, getString(R.string.stop_close_title), getString(R.string.stop_close_sub),
                 Store.flag(this, "stop_on_close", true), (v, on) -> Store.setFlag(this, "stop_on_close", on)));
-        Ui.group(this, pb);
+        IosUi.group(this, pb);
 
         });
 
         // ---- lock screen
         steps.add(() -> {
-        col.addView(Ui.section(this, R.string.set_lock));
+        col.addView(IosUi.section(this, R.string.set_lock));
         LinearLayout lk = group(col);
-        lk.addView(Ui.toggleRow(this, getString(R.string.lock_auto), getString(R.string.lock_auto_sub),
+        lk.addView(IosUi.toggle(this, getString(R.string.lock_auto), getString(R.string.lock_auto_sub),
                 Store.flag(this, "lock_auto", true), (v, on) -> Store.setFlag(this, "lock_auto", on)));
-        lk.addView(Ui.toggleRow(this, getString(R.string.lock_wake), getString(R.string.lock_wake_sub),
+        lk.addView(IosUi.toggle(this, getString(R.string.lock_wake), getString(R.string.lock_wake_sub),
                 Store.flag(this, "lock_wake", false), (v, on) -> Store.setFlag(this, "lock_wake", on)));
-        lk.addView(Ui.toggleRow(this, getString(R.string.lock_blur), getString(R.string.lock_blur_sub),
+        lk.addView(IosUi.toggle(this, getString(R.string.lock_blur), getString(R.string.lock_blur_sub),
                 Store.flag(this, "lock_blur", true), (v, on) -> Store.setFlag(this, "lock_blur", on)));
-        lk.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.lock_test), getString(R.string.lock_test_sub),
+        lk.addView(IosUi.row(this, R.drawable.ic_timer, getString(R.string.lock_test), getString(R.string.lock_test_sub),
                 null, false, v -> {
                     if (LockLauncher.ready(this)) {
                         LockLauncher.testIn(this, 6);
@@ -316,15 +319,15 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
                         Ui.toast(this, R.string.lock_test_missing);
                     }
                 }));
-        lk.addView(Ui.settingRow(this, R.drawable.ic_lock, getString(R.string.lock_preview), getString(R.string.lock_preview_sub),
+        lk.addView(IosUi.row(this, R.drawable.ic_lock, getString(R.string.lock_preview), getString(R.string.lock_preview_sub),
                 null, false, v -> Menus.openLock(this)));
-        Ui.group(this, lk);
+        IosUi.group(this, lk);
 
         });
 
         // ---- permissions
         steps.add(() -> {
-            col.addView(Ui.section(this, R.string.set_perms));
+            col.addView(IosUi.section(this, R.string.set_perms));
             perms = group(col);
             fillPerms();
         });
@@ -480,15 +483,15 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
         if (Oem.xiaomi() || Oem.samsung()) {
             addOem(R.drawable.ic_shield, R.string.perm_battery_oem, R.string.perm_battery_oem_sub, v -> Oem.battery(this));
         }
-        Ui.group(this, perms);
+        IosUi.group(this, perms);
     }
 
     private void addOem(int icon, int title, int sub, View.OnClickListener click) {
-        perms.addView(Ui.settingRow(this, icon, getString(title), getString(sub), getString(R.string.perm_open), false, click));
+        perms.addView(IosUi.row(this, icon, getString(title), getString(sub), getString(R.string.perm_open), false, click));
     }
 
     private void addPerm(int icon, int title, int sub, boolean ok, View.OnClickListener click) {
-        perms.addView(Ui.settingRow(this, icon, getString(title), getString(sub),
+        perms.addView(IosUi.row(this, icon, getString(title), getString(sub),
                 getString(ok ? R.string.perm_on : R.string.perm_enable), ok, ok ? null : click));
     }
 

@@ -63,7 +63,7 @@ public final class AiLyrics {
                 }
             } catch (GroqTranscriber.ApiException e) {
                 st = e.code == 401 ? BAD_KEY : (e.code == 429 ? LIMIT : FAILED);
-                lastError = "HTTP " + e.code;
+                lastError = e.getMessage() != null ? e.getMessage() : "HTTP " + e.code;
             } catch (Throwable e) {
                 CrashGuard.nonFatal("ai lyrics", e);
                 lastError = e.getClass().getSimpleName() + (e.getMessage() != null ? ": " + e.getMessage() : "");

@@ -223,3 +223,10 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - WhisperLib.nativeTranscribe has a prompt argument (initial_prompt carried to every window), suppress_nst, looser no_speech / logprob / entropy thresholds for singing.
 - Lyrics menu: per-song timing offset (+/- 0.25 s, reset), stored in prefs lyr_off_<key>, applied in LyricsActivity.indexFor callers.
 - Not compiled in the sandbox: build once, open the Bluetooth sheet with and without a headset, check the icon on a round and a squircle launcher, run AI sync with and without a Groq key.
+
+# Wave bar, app name, iOS settings, AI lyrics 404
+- WavePainter.drawFlat rewritten: thin white track (light grey in the light theme), accent-colored sine wave over the played part, 2.6x amplitude and thicker than the track, faded ends, ring thumb with accent core. Accent comes from setProgressTintList in WaveSeekBar (NowPlaying passes the settings accent).
+- App name: app_name is now "Music" in values and values-ar, and every visible "SimoMusic" string in both files was changed to "Music". Package ids, repo name, GitHub artifact names and User-Agent strings are unchanged.
+- Settings redesigned in iOS style: new IosUi.java (large 34sp title, uppercase grey section headers, inset rounded 12dp grouped cards, colored rounded-square icons, value + chevron rows, hairline inset dividers, iOS toggles via Toggle). SettingsActivity uses IosUi.section / row / toggle / group / cardBg / title; a plain back button row replaces the top bar.
+- AI lyrics HTTP 404: GroqTranscriber now tries whisper-large-v3-turbo then whisper-large-v3 (remembers the one that worked) when the API answers 404 or 400, and ApiException carries the API error message; AiLyrics.lastError shows that message.
+- Not verified with a compiler or on a device (none in the sandbox).

@@ -55,44 +55,43 @@ final class WavePainter {
     private final Path humpPath = new Path();
 
     private void drawFlat(Canvas cv, View v, float shown, float dt) {
-        float thin = Math.max(Ui.dp(v.getContext(), 2), stroke * 0.5f);
-        float waveW = stroke * 1.15f;
-        float rad = Math.max(thumbH * 0.3f, waveW * 1.6f) * (dragging ? 1.2f : 1f);
-        float left = v.getPaddingLeft() + rad;
-        float right = v.getWidth() - v.getPaddingRight() - rad;
+        Context c = v.getContext();
+        float sw = Math.max(Ui.dp(c, 4), stroke);
+        float pillW = Ui.dp(c, dragging ? 3 : 5);
+        float pillH = Ui.dp(c, 26);
+        float gapPx = Ui.dp(c, 6);
+        float left = v.getPaddingLeft() + sw / 2f;
+        float right = v.getWidth() - v.getPaddingRight() - sw / 2f;
         float cy = v.getHeight() / 2f;
         float px = left + (right - left) * shown;
-        boolean night = (v.getContext().getResources().getConfiguration().uiMode
+        boolean night = (c.getResources().getConfiguration().uiMode
                 & android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES;
-        rest.setStrokeWidth(thin);
-        rest.setColor(night ? 0xFFFFFFFF : 0xFFE9ECEF);
-        rest.setAlpha(night ? 235 : 255);
-        cv.drawLine(left, cy, right, cy, rest);
-        played.setStrokeWidth(waveW);
-        float a = amp * 2.6f;
+        rest.setStrokeWidth(sw);
+        rest.setColor(night ? 0x59FFFFFF : 0x33000000);
+        float tStart = px + gapPx + pillW / 2f;
+        if (right > tStart) cv.drawLine(tStart, cy, right, cy, rest);
+        played.setStrokeWidth(sw);
+        float a = amp * 1.0f;
+        float len = Ui.dp(c, 24);
+        float shift = (AnimationUtils.currentAnimationTimeMillis() % 100000L) / 1000f * Ui.dp(c, 18);
+        float end = Math.max(left, px - gapPx - pillW / 2f);
         path.rewind();
-        path.moveTo(left, cy);
-        if (a < 0.4f || px - left < 2f) {
-            path.lineTo(px, cy);
+        if (a < 0.3f || end - left < 1f) {
+            path.moveTo(left, cy);
+            path.lineTo(Math.max(end, left + 0.1f), cy);
         } else {
-            float k = 6.2831855f / wave;
-            float fade = Math.min(Ui.dp(v.getContext(), 18), (px - left) * 0.5f);
-            for (float x = left; x <= px; x += 2f) {
-                float in = fade > 0f ? Math.min(1f, (x - left) / fade) : 1f;
-                float out = fade > 0f ? Math.min(1f, (px - x) / fade) : 1f;
-                float env = Math.min(in, out);
-                env = env * env * (3f - 2f * env);
-                path.lineTo(x, cy + a * env * (float) Math.sin((x - left) * k - phase * 1.6f));
+            float step = Math.max(1.5f, Ui.dp(c, 1));
+            path.moveTo(left, cy + a * (float) Math.sin(shift / len * 6.2831855f));
+            for (float x = left + step; x < end; x += step) {
+                path.lineTo(x, cy + a * (float) Math.sin((x - left + shift) / len * 6.2831855f));
             }
-            path.lineTo(px, cy);
+            path.lineTo(end, cy + a * (float) Math.sin((end - left + shift) / len * 6.2831855f));
         }
         cv.drawPath(path, played);
-        glow.setColor(played.getColor());
-        glow.setAlpha(dragging ? 70 : 35);
-        cv.drawCircle(px, cy, rad * 1.5f, glow);
         ring.setColor(0xFFFFFFFF);
-        cv.drawCircle(px, cy, rad, ring);
-        cv.drawCircle(px, cy, Math.max(1f, rad - Math.max(Ui.dp(v.getContext(), 2), rad * 0.34f)), played.getColor() == 0 ? thumb : thumbAccent(played.getColor()));
+        float rr = pillW / 2f;
+        r.set(px - rr, cy - pillH / 2f, px + rr, cy + pillH / 2f);
+        cv.drawRoundRect(r, rr, rr, ring);
     }
 
     private final Paint thumbAccent = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -102,7 +101,7 @@ final class WavePainter {
         return thumbAccent;
     }
 
-    private int idleMs = 33;
+    private int idleMs = 16;
 
     void idleMs(int ms) {
         idleMs = Math.max(16, Math.min(100, ms));
@@ -124,7 +123,7 @@ final class WavePainter {
         if (shown < 0f || dragging) shown = target;
         else shown += (target - shown) * Math.min(1f, dt / 140f);
         float goal = waving && !dragging ? ampMax : 0f;
-        amp += (goal - amp) * Math.min(1f, dt / 160f);
+        amp += (goal - amp) * Math.min(1f, dt / 110f);
         if (Math.abs(goal - amp) < 0.02f) amp = goal;
         phase += dt * 0.0055f;
         if (phase > 6.2831855f) phase -= 6.2831855f;
@@ -136,7 +135,7 @@ final class WavePainter {
                     || Math.abs(goal - amp) > 0.02f;
             boolean busy = easingFlat || amp > 0.02f || waving;
             if (busy && !Gest.busy) {
-                if (easingFlat || dragging) v.postInvalidateOnAnimation();
+                if (easingFlat || dragging || idleMs <= 33) v.postInvalidateOnAnimation();
                 else v.postInvalidateDelayed(idleMs);
             } else last = 0;
             return;

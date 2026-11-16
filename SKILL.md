@@ -230,3 +230,14 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - Settings redesigned in iOS style: new IosUi.java (large 34sp title, uppercase grey section headers, inset rounded 12dp grouped cards, colored rounded-square icons, value + chevron rows, hairline inset dividers, iOS toggles via Toggle). SettingsActivity uses IosUi.section / row / toggle / group / cardBg / title; a plain back button row replaces the top bar.
 - AI lyrics HTTP 404: GroqTranscriber now tries whisper-large-v3-turbo then whisper-large-v3 (remembers the one that worked) when the API answers 404 or 400, and ApiException carries the API error message; AiLyrics.lastError shows that message.
 - Not verified with a compiler or on a device (none in the sandbox).
+
+# Wave redo (based on mahozad wavy-slider 2.2.0, Compose library, algorithm ported to Views)
+- Reason: the first wave looked jerky (envelope fade at both ends, phase accumulated per frame, idle redraw every 33 ms) and was too tall.
+- WavePainter.drawFlat now follows the library: plain sine from the start to the thumb, constant amplitude (no fade), shift computed from the animation clock (16 dp/s, wavelength 22 dp) so motion is continuous, wave height eases in about 110 ms (library: 300 ms), round caps, step 1.5 px.
+- Amplitude is amp * 1.35 (about 4 dp for the player seek bar, 8 dp peak to peak), wave stroke 4.6 dp over a 2 dp white track, thumb glow removed.
+- Default idleMs is 16, so the wave redraws on every frame (postInvalidateOnAnimation); the lock screen keeps 50 ms (delayed invalidate). Gest.busy still pauses drawing while panels are dragged.
+- Not verified with a compiler or on a device (none in the sandbox).
+
+# Wave closer to One UI (current media progress style)
+- WavePainter.drawFlat: wave and faded track share one thickness (4 dp, round caps), wave in the settings accent (amplitude 3 dp when playing, wavelength 24 dp, 18 dp/s, flat while paused or dragging), faded track (white 35 percent in dark, black 20 percent in light) starts after the thumb, 6 dp gap on both sides of a white vertical pill thumb (5 dp wide, 26 dp tall, narrows to 3 dp while dragging).
+- Not verified with a compiler or on a device (none in the sandbox).

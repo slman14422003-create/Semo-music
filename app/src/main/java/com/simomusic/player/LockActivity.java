@@ -467,7 +467,10 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
                 @Override
                 public void onDismissSucceeded() {
                     LockHandoff.mark(np.art);
-                    Ui.go(LockActivity.this, MainActivity.openPlayerIntent(LockActivity.this));
+                    for (View v : movers()) {      // everything but the cover steps aside; the cover carries over into the player
+                        if (v != null && v != coverBox) v.animate().alpha(0f).setDuration(Motion.FAST).start();
+                    }
+                    LockHandoff.launchPlayer(LockActivity.this);
                     finish();
                 }
 

@@ -24,10 +24,24 @@ public final class LockHandoff {
         }
     }
 
+    /**
+     * Opens the full player from the lock screen. The animation is passed as launch options (not only as
+     * overridePendingTransition), which is what One UI (Samsung) honors for a launch that comes from another task.
+     */
+    public static void launchPlayer(android.app.Activity a) {
+        android.content.Intent i = MainActivity.openPlayerIntent(a);
+        try {
+            android.os.Bundle o = android.app.ActivityOptions.makeCustomAnimation(a, R.anim.fade_in, R.anim.fade_out).toBundle();
+            a.startActivity(i, o);
+        } catch (RuntimeException e) {
+            Ui.go(a, i);
+        }
+    }
+
     public static int[] take() {
         int[] b = box;
         box = null;
-        if (b == null || SystemClock.uptimeMillis() - at > 4000L) return null;
+        if (b == null || SystemClock.uptimeMillis() - at > 6000L) return null;
         return b;
     }
 }

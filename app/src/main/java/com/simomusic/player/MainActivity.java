@@ -178,7 +178,9 @@ public class MainActivity extends AppCompatActivity implements TrackAdapter.List
                 // wait for the connection so an empty queue never shows a blank player
                 Pb.whenReady(() -> {
                     try {
-                        if (panel != null && Pb.hasMedia() && !panel.isExpanded()) panel.expand(true);
+                        if (panel == null || !Pb.hasMedia()) return;
+                        if (!panel.isExpanded()) panel.expand(true);
+                        else panel.replayHandoff();
                     } catch (RuntimeException e) {
                         CrashGuard.nonFatal("open player", e);
                     }

@@ -121,6 +121,9 @@ public final class PlayerPanel extends FrameLayout {
         capLp.setMarginStart(Ui.dp(a, 8));
         chip.addView(cap, capLp);
         top.addView(Ui.space(d, 1f));
+        ImageButton vol = Ui.icon(d, R.drawable.ic_volume, R.string.volume_title, v -> VolumeSheet.show(a));
+        ((LinearLayout.LayoutParams) vol.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
+        top.addView(vol);
         ImageButton lyr = Ui.icon(d, R.drawable.ic_lyrics, R.string.lyrics, v -> Ui.go(a, new android.content.Intent(a, LyricsActivity.class)));
         ((LinearLayout.LayoutParams) lyr.getLayoutParams()).setMarginEnd(Ui.dp(a, 8));
         top.addView(lyr);
@@ -284,8 +287,20 @@ public final class PlayerPanel extends FrameLayout {
             v.animate().cancel();
             v.setAlpha(0f);
             v.setTranslationY(rise);
-            v.animate().alpha(1f).translationY(0f).setStartDelay(60L + (i - 1) * 35L).setDuration(380).setInterpolator(Motion.ENTER).start();
+            v.animate().alpha(1f).translationY(0f).setStartDelay(40L + (i - 1) * 28L).setDuration(340).setInterpolator(Motion.ENTER).start();
         }
+        flipCover(from);
+    }
+
+    /** The player was already open when the phone was locked: only the cover glides down from the lock screen's position. */
+    public void replayHandoff() {
+        if (getVisibility() != VISIBLE) return;
+        int[] from = LockHandoff.take();
+        if (from != null) flipCover(from);
+    }
+
+    /** The cover starts exactly where the lock screen's cover was and settles into its place here (same size, same spot, one motion). */
+    private void flipCover(final int[] from) {
         final android.widget.ImageView art = np.art;
         getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
             @Override
@@ -311,6 +326,7 @@ public final class PlayerPanel extends FrameLayout {
                 return true;
             }
         });
+        invalidate();       // a draw pass is guaranteed even when nothing else changed
     }
 
     public void expand(boolean animate) {
@@ -364,10 +380,10 @@ public final class PlayerPanel extends FrameLayout {
                 v.setScaleX(0.84f);
                 v.setScaleY(0.84f);
             }
-            long delay = 90L + (i - 1) * 55L;
+            long delay = 50L + (i - 1) * 38L;
             android.view.ViewPropertyAnimator pa = v.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(delay).setDuration(460).setInterpolator(Motion.ENTER);
-            if (v instanceof CoverBox) pa.scaleX(1f).scaleY(1f).setDuration(560).setInterpolator(new android.view.animation.OvershootInterpolator(1.1f));
+                    .setStartDelay(delay).setDuration(380).setInterpolator(Motion.ENTER);
+            if (v instanceof CoverBox) pa.scaleX(1f).scaleY(1f).setDuration(460).setInterpolator(new android.view.animation.OvershootInterpolator(1.1f));
             pa.start();
         }
     }

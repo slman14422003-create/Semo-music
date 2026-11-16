@@ -92,6 +92,10 @@ public final class Ui {
         return med;
     }
 
+    public static boolean isRtl(Context c) {
+        return c.getResources().getConfiguration().getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+    }
+
     public static boolean isNight(Context c) {
         return (c.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
                 == android.content.res.Configuration.UI_MODE_NIGHT_YES;

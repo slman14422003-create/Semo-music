@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Settings: audio formats, playback, lock screen, and the permission center (status + one tap to grant). */
-public class SettingsActivity extends AppCompatActivity {
+public class SettingsActivity extends AppCompatActivity implements FullBleed {
     private LinearLayout perms;
     private boolean dirty;
     private int permSig = -1;
@@ -174,11 +174,16 @@ public class SettingsActivity extends AppCompatActivity {
             }
             startActivity(MainActivity.tabIntent(this, i));
             finish();
-            overridePendingTransition(0, 0);
+            overridePendingTransition(R.anim.fade_in, R.anim.fade_out);
         });
         sv.setOnScrollChangeListener((v, x, y, ox, oy) -> Glass.boost());
         setContentView(stage);
         getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Ui.color(this, R.color.bg)));
+        Ui.edgeToEdge(this, root, false, (bottom, ime) -> {
+            nlp.bottomMargin = Ui.dp(this, 12) + bottom;
+            nav.setLayoutParams(nlp);
+            col.setPadding(0, 0, 0, Ui.dp(this, 120) + bottom);
+        });
         if (b == null) {
             root.post(() -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -202,7 +207,10 @@ public class SettingsActivity extends AppCompatActivity {
                 getString(R.string.upd_row_sub, Updater.current(this)), null, false, v -> UpdateSheet.show(this)));
         Ui.group(this, gen);
 
+        final java.util.ArrayDeque<Runnable> steps = new java.util.ArrayDeque<>();
+
         // ---- formats
+        steps.add(() -> {
         col.addView(Ui.section(this, R.string.set_formats));
         LinearLayout fm = group(col);
         String[] names = getResources().getStringArray(R.array.fmt_names);
@@ -240,7 +248,10 @@ public class SettingsActivity extends AppCompatActivity {
         }
         Ui.group(this, lib);
 
+        });
+
         // ---- local AI
+        steps.add(() -> {
         col.addView(Ui.section(this, R.string.set_ai));
         LinearLayout ai = group(col);
         ai.addView(Ui.toggleRow(this, getString(R.string.ai_enable), getString(R.string.ai_enable_sub),
@@ -258,9 +269,18 @@ public class SettingsActivity extends AppCompatActivity {
         }
         Ui.group(this, ai);
 
+        });
+
         // ---- playback
+        steps.add(() -> {
         col.addView(Ui.section(this, R.string.set_playback));
         LinearLayout pb = group(col);
+        pb.addView(Ui.settingRow(this, R.drawable.ic_volume, getString(R.string.volume_title), getString(R.string.volume_row_sub),
+                VolumeHud.label(this), false, v -> VolumeSheet.show(this)));
+        pb.addView(Ui.toggleRow(this, getString(R.string.boost_title), getString(R.string.boost_sub),
+                Store.boostOn(this), (v, on) -> Store.setFlag(this, "boost_on", on)));
+        pb.addView(Ui.toggleRow(this, getString(R.string.own_volume_title), getString(R.string.own_volume_sub),
+                Store.ownVolume(this), (v, on) -> Store.setFlag(this, "own_volume", on)));
         pb.addView(Ui.toggleRow(this, getString(R.string.skip_silence), getString(R.string.skip_silence_sub),
                 Store.flag(this, "skip_silence", false), (v, on) -> Store.setFlag(this, "skip_silence", on)));
         pb.addView(Ui.settingRow(this, R.drawable.ic_timer, getString(R.string.crossfade_title), getString(R.string.crossfade_sub),
@@ -275,7 +295,10 @@ public class SettingsActivity extends AppCompatActivity {
                 Store.flag(this, "stop_on_close", true), (v, on) -> Store.setFlag(this, "stop_on_close", on)));
         Ui.group(this, pb);
 
+        });
+
         // ---- lock screen
+        steps.add(() -> {
         col.addView(Ui.section(this, R.string.set_lock));
         LinearLayout lk = group(col);
         lk.addView(Ui.toggleRow(this, getString(R.string.lock_auto), getString(R.string.lock_auto_sub),
@@ -297,9 +320,29 @@ public class SettingsActivity extends AppCompatActivity {
                 null, false, v -> Menus.openLock(this)));
         Ui.group(this, lk);
 
+        });
+
         // ---- permissions
-        col.addView(Ui.section(this, R.string.set_perms));
-        perms = group(col);
+        steps.add(() -> {
+            col.addView(Ui.section(this, R.string.set_perms));
+            perms = group(col);
+            fillPerms();
+        });
+
+        final android.view.Choreographer ch = android.view.Choreographer.getInstance();
+        final android.view.Choreographer.FrameCallback[] pump = new android.view.Choreographer.FrameCallback[1];
+        pump[0] = t -> {
+            if (isFinishing() || isDestroyed()) return;
+            Runnable r = steps.poll();
+            if (r == null) return;
+            try {
+                r.run();
+            } catch (RuntimeException e) {
+                CrashGuard.nonFatal("settings section", e);
+            }
+            if (!steps.isEmpty()) ch.postFrameCallback(pump[0]);
+        };
+        ch.postFrameCallback(f -> ch.postFrameCallback(pump[0]));   // the first screenful is drawn before the rest is built
     }
 
     private LinearLayout group(LinearLayout parent) {
@@ -452,7 +495,7 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        fillPerms();
+        if (perms != null) fillPerms();
     }
 
     @Override

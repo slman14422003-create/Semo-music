@@ -63,6 +63,28 @@ public final class Store {
         prefs(c).edit().putBoolean(k, v).apply();
     }
 
+    // ---- volume boost (software gain above the system maximum) and the app's own volume bar
+    public static boolean boostOn(Context c) {
+        return flag(c, "boost_on", true);
+    }
+
+    /** 100..200: 100 means no boost. */
+    public static int boostPct(Context c) {
+        return Math.max(100, Math.min(200, prefs(c).getInt("boost_pct", 100)));
+    }
+
+    public static void setBoostPct(Context c, int pct) {
+        prefs(c).edit().putInt("boost_pct", Math.max(100, Math.min(200, pct))).apply();
+    }
+
+    public static float boostGain(Context c) {
+        return boostOn(c) ? boostPct(c) / 100f : 1f;
+    }
+
+    public static boolean ownVolume(Context c) {
+        return flag(c, "own_volume", true);
+    }
+
     public static boolean formatOn(Context c, String f) {
         return prefs(c).getBoolean("fmt_" + f, true);
     }

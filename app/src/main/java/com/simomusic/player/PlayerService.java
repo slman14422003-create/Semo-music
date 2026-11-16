@@ -106,6 +106,7 @@ public class PlayerService extends MediaSessionService {
 
     private final SharedPreferences.OnSharedPreferenceChangeListener prefs = (sp, key) -> {
         if (BtAudio.isKey(key)) BtAudio.refresh();
+        if ("boost_on".equals(key) || "boost_pct".equals(key)) BoostProcessor.INSTANCE.setGain(Store.boostGain(this));
         if ("skip_silence".equals(key) && player != null) player.setSkipSilenceEnabled(sp.getBoolean(key, false));
         if ("sleep_wall".equals(key)) armSleep(sp.getLong(key, 0));
         if ("crossfade".equals(key) && player != null) {
@@ -327,7 +328,7 @@ public class PlayerService extends MediaSessionService {
                 return new androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
                         .setEnableFloatOutput(enableFloatOutput)
                         .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                        .setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{BtDspProcessor.INSTANCE})
+                        .setAudioProcessors(new androidx.media3.common.audio.AudioProcessor[]{BtDspProcessor.INSTANCE, BoostProcessor.INSTANCE})
                         .build();
             }
         };
@@ -355,6 +356,7 @@ public class PlayerService extends MediaSessionService {
                 .setWakeMode(C.WAKE_MODE_NETWORK)
                 .build();
         player.setSkipSilenceEnabled(Store.flag(this, "skip_silence", false));
+        BoostProcessor.INSTANCE.setGain(Store.boostGain(this));
         BtAudio.attach(this, player);
         GroupAudio.attach(this, player);
         player.addListener(new Player.Listener() {

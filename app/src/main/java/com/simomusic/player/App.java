@@ -90,6 +90,12 @@ public class App extends Application {
                 // runs inside super.onCreate(), before the screen builds its views
                 Accent.apply(a.getTheme(), a);
                 Ui.highRefresh(a);
+                VolumeHud.install(a.getWindow(), a);
+                if (Build.VERSION.SDK_INT >= 34 && !(a instanceof LockActivity)) {
+                    // the same open / close motion on every phone (One UI included) and with predictive back
+                    a.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN, R.anim.act_open_enter, R.anim.act_open_exit);
+                    a.overrideActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE, R.anim.act_close_enter, R.anim.act_close_exit);
+                }
                 LIVE.add(new java.lang.ref.WeakReference<>(a));
             }
             @Override public void onActivityResumed(Activity a) { }

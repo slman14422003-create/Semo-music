@@ -31,6 +31,7 @@ public final class Dlg {
      * Owns the dismiss listener: onDismiss (may be null) runs when the dialog closes, for any reason.
      */
     public static void bind(Context c, final Dialog d, final Runnable onDismiss) {
+        VolumeHud.install(d.getWindow(), c);
         if (c instanceof LifecycleOwner) {
             final LifecycleOwner o = (LifecycleOwner) c;
             final DefaultLifecycleObserver ob = new DefaultLifecycleObserver() {

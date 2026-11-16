@@ -212,3 +212,14 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - LockActivity.onCreate also survives OutOfMemoryError while building the screen.
 - README.md removed (never wanted).
 - Not verified on a device (no compiler in the sandbox): test lock screen wake with music playing, swipe up, unlock into the player, open the browser from the app and come back, Bluetooth on / off during playback.
+
+# Bluetooth sheet lag, launcher icon, lyrics recognition and sync
+- Glass.sheet(root, card, frozen) + LiveGlass.setFrozen: the blur behind the sheet is recorded once (and again only when the sheet size changes) instead of re-recording the whole activity every vsync. BtSheet uses it.
+- BtSheet: BtInfo.load runs 140 ms after the sheet opens (after the enter animation starts) and the content is built in stages, one per frame (header, group listening, live analysis, sound tuning, facts). The analysis tick only calls setText when a value changed.
+- Launcher icon: drawable-nodpi/ic_launcher_fg*.png (648 px canvas, artwork exactly 66 dp inside the 108 dp adaptive canvas = official safe zone, nothing is cropped by any mask), white background (ic_launcher_back*.xml), ic_launcher_mono.png for themed icons. Default icon is the supplied artwork unchanged; the 8 colour variants recolour only the ring. IconActivity preview unchanged (1.5x scale = visible 72 dp window).
+- GroqTranscriber: word timestamps (transcribeWords), prompt, 10 min chunks with overlap, retry on 429 / 5xx, hallucination filters for segments.
+- AiSync.run(..., apiKey, ...): uses Groq whisper-large-v3 when a key is saved (falls back to the on-device model when it is installed), prompt = first lines of the known lyrics. LyricsActivity offers sync with a key even when the on-device library is unavailable.
+- LyricsAligner rewritten: Arabic/Latin folding (hamza forms, al- prefix, apostrophes), weighted LCS by word length, line start estimated from the first matched word minus its chars-before-it * median ms per char, longest increasing chain removes outlier anchors.
+- WhisperLib.nativeTranscribe has a prompt argument (initial_prompt carried to every window), suppress_nst, looser no_speech / logprob / entropy thresholds for singing.
+- Lyrics menu: per-song timing offset (+/- 0.25 s, reset), stored in prefs lyr_off_<key>, applied in LyricsActivity.indexFor callers.
+- Not compiled in the sandbox: build once, open the Bluetooth sheet with and without a headset, check the icon on a round and a squircle launcher, run AI sync with and without a Groq key.

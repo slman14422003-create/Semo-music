@@ -33,6 +33,8 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     private int blurR;
     private boolean sheet;
     private boolean ticking;
+    private boolean frozen;
+    private boolean recorded;
     private final ColorMatrix sat = new ColorMatrix();
     private final Runnable ticker = new Runnable() {
         @Override
@@ -73,7 +75,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     private final Choreographer.FrameCallback frame = new Choreographer.FrameCallback() {
         @Override
         public void doFrame(long t) {
-            if (vto == null || !gpu || !ticking) {
+            if (vto == null || !gpu || !ticking || settled()) {
                 looping = false;
                 return;
             }
@@ -126,6 +128,22 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         ticking = on;
     }
 
+    public void setFrozen(boolean on) {
+        frozen = on;
+        if (!on) recorded = false;
+    }
+
+    private boolean settled() {
+        return frozen && recorded && owner.getWidth() == nodeW && owner.getHeight() == nodeH;
+    }
+
+    private void wake() {
+        if (frozen && ticking && gpu && !looping && vto != null) {
+            looping = true;
+            Choreographer.getInstance().postFrameCallback(frame);
+        }
+    }
+
     public void setTint(int color) {
         tint = color;
         solidPaint.setColor(ColorUtils.compositeColors(color, bgColor));
@@ -156,6 +174,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         owner.removeCallbacks(ticker);
         Choreographer.getInstance().removeFrameCallback(frame);
         looping = false;
+        recorded = false;
         if (node != null) {
             node.discardDisplayList();
             nodeW = 0;
@@ -177,7 +196,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
     }
 
     private void requestGpuFrame() {
-        if (!live()) return;
+        if (settled() || !live()) return;
         long now = SystemClock.uptimeMillis();
         if (now - last < (now < Glass.hotUntil ? 8 : 110)) return;
         last = now;
@@ -211,6 +230,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             recording = false;
             node.endRecording();
         }
+        recorded = true;
     }
 
     private void update() {
@@ -262,7 +282,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         sheenPaint.setAlpha(alpha);
         if (gpu && !failed && !recording && canvas.isHardwareAccelerated() && live()) {
             try {
-                recordGpu(r);
+                if (!frozen || !recorded || nodeW != r.width() || nodeH != r.height()) recordGpu(r);
                 node.setAlpha(alpha / 255f);
                 canvas.drawRenderNode(node);
                 tintPaint.setColor(tint);
@@ -276,6 +296,12 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
         } else if (gpu && recording) {
             solidPaint.setAlpha(alpha);
             canvas.drawRect(r, solidPaint);
+        } else if (gpu && frozen && !failed && node != null && recorded) {
+            canvas.drawRenderNode(node);
+            tintPaint.setColor(tint);
+            tintPaint.setAlpha(tintPaint.getAlpha() * alpha / 255);
+            canvas.drawRect(r, tintPaint);
+            wake();
         } else if (bmp != null && !failed) {
             rect.set(r);
             bmpPaint.setAlpha(alpha);

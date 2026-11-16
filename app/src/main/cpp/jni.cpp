@@ -41,7 +41,7 @@ Java_com_simomusic_player_WhisperLib_nativeCancel(JNIEnv *, jclass) {
 // returns 0 on success
 JNIEXPORT jint JNICALL
 Java_com_simomusic_player_WhisperLib_nativeTranscribe(JNIEnv *env, jclass, jlong ptr, jfloatArray pcm,
-                                                      jint threads, jstring lang, jboolean words) {
+                                                      jint threads, jstring lang, jboolean words, jstring prompt) {
     auto *ctx = (whisper_context *) ptr;
     g_cancel.store(false);
     g_text.clear();
@@ -52,6 +52,12 @@ Java_com_simomusic_player_WhisperLib_nativeTranscribe(JNIEnv *env, jclass, jlong
     const char *l = lang ? env->GetStringUTFChars(lang, nullptr) : nullptr;
     std::string language = (l && *l) ? l : "auto";
     if (l) env->ReleaseStringUTFChars(lang, l);
+    std::string initial;
+    if (prompt) {
+        const char *pp = env->GetStringUTFChars(prompt, nullptr);
+        if (pp) initial = pp;
+        if (pp) env->ReleaseStringUTFChars(prompt, pp);
+    }
 
     whisper_full_params wp = whisper_full_default_params(WHISPER_SAMPLING_GREEDY);
     wp.print_realtime = false;
@@ -67,6 +73,15 @@ Java_com_simomusic_player_WhisperLib_nativeTranscribe(JNIEnv *env, jclass, jlong
     wp.token_timestamps = words;  // word-level times (for syncing known lyrics)
     wp.max_len = words ? 1 : 0;   // one word per segment, or natural phrases (for generating lyrics)
     wp.split_on_word = words;
+    wp.suppress_blank = true;
+    wp.suppress_nst = true;
+    wp.no_speech_thold = 0.85f;
+    wp.logprob_thold = -1.6f;
+    wp.entropy_thold = 2.8f;
+    if (!initial.empty()) {
+        wp.initial_prompt = initial.c_str();
+        wp.carry_initial_prompt = true;
+    }
     wp.abort_callback = abort_cb;
     wp.abort_callback_user_data = nullptr;
 

@@ -30,7 +30,7 @@ public final class BtSheet {
         final Dialog d = new Dialog(c, R.style.AppSheet);
         LinearLayout root = new LinearLayout(c);
         root.setOrientation(LinearLayout.VERTICAL);
-        Glass.sheet(root, false);
+        Glass.sheet(root, false, true);
         root.setPadding(0, Ui.dp(c, 4), 0, Ui.dp(c, 24));
 
         LinearLayout head = new LinearLayout(c);
@@ -76,92 +76,107 @@ public final class BtSheet {
         Dlg.bind(c, d, () -> alive[0] = false);
         d.show();
 
-        BtInfo.load(c, info -> {
+        final android.os.Handler hh = new android.os.Handler(android.os.Looper.getMainLooper());
+        hh.postDelayed(() -> {
             if (!alive[0] || !d.isShowing()) return;
-            body.removeAllViews();
-            fill(c, d, body, info);
-        });
+            BtInfo.load(c, info -> {
+                if (!alive[0] || !d.isShowing()) return;
+                body.removeAllViews();
+                fill(c, d, body, info, alive);
+            });
+        }, 140);
     }
 
-    private static void fill(final Context c, final Dialog d, LinearLayout body, BtInfo i) {
+    private static void steps(final View body, final boolean[] alive, final Runnable... list) {
+        final int[] i = {0};
+        final Runnable[] run = new Runnable[1];
+        run[0] = () -> {
+            if (!alive[0] || i[0] >= list.length) return;
+            list[i[0]++].run();
+            body.postOnAnimation(run[0]);
+        };
+        body.postOnAnimation(run[0]);
+    }
+
+    private static void fill(final Context c, final Dialog d, final LinearLayout body, final BtInfo i, final boolean[] alive) {
         if (!i.hasDevice) {
-            LinearLayout box = new LinearLayout(c);
-            box.setOrientation(LinearLayout.VERTICAL);
-            box.setGravity(Gravity.CENTER_HORIZONTAL);
-            box.setPadding(Ui.dp(c, 20), Ui.dp(c, 10), Ui.dp(c, 20), Ui.dp(c, 6));
-            box.addView(badge(c, false));
-            TextView a = Ui.text(c, c.getString(R.string.bt_none), 18, R.color.text_primary);
-            a.setTypeface(Ui.titleFace(true));
-            a.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams ap = Ui.lp(-1, -2);
-            ap.topMargin = Ui.dp(c, 14);
-            box.addView(a, ap);
-            TextView b = Ui.text(c, c.getString(R.string.bt_none_sub), 14, R.color.text_secondary);
-            b.setGravity(Gravity.CENTER);
-            LinearLayout.LayoutParams bp = Ui.lp(-1, -2);
-            bp.topMargin = Ui.dp(c, 6);
-            box.addView(b, bp);
-            body.addView(box);
-            body.addView(settingsButton(c, d));
-            body.addView(GroupSheet.entry(c, d));
-        body.addView(analysis(c, d));
-            body.addView(options(c));
+            steps(body, alive,
+                    () -> {
+                        LinearLayout box = new LinearLayout(c);
+                        box.setOrientation(LinearLayout.VERTICAL);
+                        box.setGravity(Gravity.CENTER_HORIZONTAL);
+                        box.setPadding(Ui.dp(c, 20), Ui.dp(c, 10), Ui.dp(c, 20), Ui.dp(c, 6));
+                        box.addView(badge(c, false));
+                        TextView a = Ui.text(c, c.getString(R.string.bt_none), 18, R.color.text_primary);
+                        a.setTypeface(Ui.titleFace(true));
+                        a.setGravity(Gravity.CENTER);
+                        LinearLayout.LayoutParams ap = Ui.lp(-1, -2);
+                        ap.topMargin = Ui.dp(c, 14);
+                        box.addView(a, ap);
+                        TextView b = Ui.text(c, c.getString(R.string.bt_none_sub), 14, R.color.text_secondary);
+                        b.setGravity(Gravity.CENTER);
+                        LinearLayout.LayoutParams bp = Ui.lp(-1, -2);
+                        bp.topMargin = Ui.dp(c, 6);
+                        box.addView(b, bp);
+                        body.addView(box);
+                        body.addView(settingsButton(c, d));
+                    },
+                    () -> body.addView(GroupSheet.entry(c, d)),
+                    () -> body.addView(analysis(c, d)),
+                    () -> body.addView(options(c)));
             return;
         }
 
-        // header: badge + name + kind
-        LinearLayout hd = new LinearLayout(c);
-        hd.setGravity(Gravity.CENTER_VERTICAL);
-        hd.setPadding(Ui.dp(c, 12), Ui.dp(c, 4), Ui.dp(c, 12), Ui.dp(c, 14));
-        hd.addView(badge(c, true));
-        LinearLayout col = new LinearLayout(c);
-        col.setOrientation(LinearLayout.VERTICAL);
-        TextView nm = Ui.text(c, i.name.isEmpty() ? c.getString(R.string.bt_t_other) : i.name, 20, R.color.text_primary);
-        nm.setTypeface(Ui.titleFace(true));
-        nm.setMaxLines(2);
-        nm.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        col.addView(nm);
-        TextView kind = Ui.text(c, kindLabel(c, i), 14, R.color.accent_text);
-        kind.setPadding(0, Ui.dp(c, 3), 0, 0);
-        col.addView(kind);
-        LinearLayout.LayoutParams cp = Ui.weight(1);
-        cp.setMarginStart(Ui.dp(c, 14));
-        hd.addView(col, cp);
-        body.addView(hd);
-
-        if (i.needPerm) {
-            body.addView(permButton(c, d));
-        }
-
-        body.addView(GroupSheet.entry(c, d));
-        body.addView(analysis(c, d));
-        body.addView(options(c));
-
-        // facts
-        LinearLayout facts = new LinearLayout(c);
-        facts.setOrientation(LinearLayout.VERTICAL);
-        facts.setBackgroundResource(R.drawable.bg_card);
-        facts.setPadding(Ui.dp(c, 16), Ui.dp(c, 6), Ui.dp(c, 16), Ui.dp(c, 6));
-        addFact(c, facts, R.string.bt_row_type, typeLabel(c, i.audioType));
-        if (!i.address.isEmpty()) addFact(c, facts, R.string.bt_row_addr, i.address.toUpperCase(Locale.ROOT));
-        if (!i.needPerm) addFact(c, facts, R.string.bt_row_pair, c.getString(i.bonded ? R.string.bt_paired : R.string.bt_not_paired));
-        String prof = profiles(c, i);
-        if (!prof.isEmpty()) addFact(c, facts, R.string.bt_row_profiles, prof);
-        if (i.a2dp || i.audioType == 8) addFact(c, facts, R.string.bt_row_stream, c.getString(i.playing ? R.string.bt_playing : R.string.bt_idle));
-        if (i.battery >= 0) addFact(c, facts, R.string.bt_row_battery, i.battery + "%");
-        addFact(c, facts, R.string.bt_row_rates, rates(c, i.rates));
-        addFact(c, facts, R.string.bt_row_channels, channels(c, i.channels));
-        String fm = formats(i.encodings);
-        if (!fm.isEmpty()) addFact(c, facts, R.string.bt_row_formats, fm);
-        LinearLayout.LayoutParams fp = Ui.lp(-1, -2);
-        fp.bottomMargin = Ui.dp(c, 10);
-        body.addView(facts, fp);
-
-        TextView note = Ui.text(c, c.getString(R.string.bt_codec), 13, R.color.text_hint);
-        note.setLineSpacing(0, 1.1f);
-        note.setPadding(Ui.dp(c, 12), Ui.dp(c, 12), Ui.dp(c, 12), Ui.dp(c, 4));
-        body.addView(note);
-        body.addView(settingsButton(c, d));
+        steps(body, alive,
+                () -> {
+                    LinearLayout hd = new LinearLayout(c);
+                    hd.setGravity(Gravity.CENTER_VERTICAL);
+                    hd.setPadding(Ui.dp(c, 12), Ui.dp(c, 4), Ui.dp(c, 12), Ui.dp(c, 14));
+                    hd.addView(badge(c, true));
+                    LinearLayout col = new LinearLayout(c);
+                    col.setOrientation(LinearLayout.VERTICAL);
+                    TextView nm = Ui.text(c, i.name.isEmpty() ? c.getString(R.string.bt_t_other) : i.name, 20, R.color.text_primary);
+                    nm.setTypeface(Ui.titleFace(true));
+                    nm.setMaxLines(2);
+                    nm.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                    col.addView(nm);
+                    TextView kind = Ui.text(c, kindLabel(c, i), 14, R.color.accent_text);
+                    kind.setPadding(0, Ui.dp(c, 3), 0, 0);
+                    col.addView(kind);
+                    LinearLayout.LayoutParams cp = Ui.weight(1);
+                    cp.setMarginStart(Ui.dp(c, 14));
+                    hd.addView(col, cp);
+                    body.addView(hd);
+                    if (i.needPerm) body.addView(permButton(c, d));
+                },
+                () -> body.addView(GroupSheet.entry(c, d)),
+                () -> body.addView(analysis(c, d)),
+                () -> body.addView(options(c)),
+                () -> {
+                    LinearLayout facts = new LinearLayout(c);
+                    facts.setOrientation(LinearLayout.VERTICAL);
+                    facts.setBackgroundResource(R.drawable.bg_card);
+                    facts.setPadding(Ui.dp(c, 16), Ui.dp(c, 6), Ui.dp(c, 16), Ui.dp(c, 6));
+                    addFact(c, facts, R.string.bt_row_type, typeLabel(c, i.audioType));
+                    if (!i.address.isEmpty()) addFact(c, facts, R.string.bt_row_addr, i.address.toUpperCase(Locale.ROOT));
+                    if (!i.needPerm) addFact(c, facts, R.string.bt_row_pair, c.getString(i.bonded ? R.string.bt_paired : R.string.bt_not_paired));
+                    String prof = profiles(c, i);
+                    if (!prof.isEmpty()) addFact(c, facts, R.string.bt_row_profiles, prof);
+                    if (i.a2dp || i.audioType == 8) addFact(c, facts, R.string.bt_row_stream, c.getString(i.playing ? R.string.bt_playing : R.string.bt_idle));
+                    if (i.battery >= 0) addFact(c, facts, R.string.bt_row_battery, i.battery + "%");
+                    addFact(c, facts, R.string.bt_row_rates, rates(c, i.rates));
+                    addFact(c, facts, R.string.bt_row_channels, channels(c, i.channels));
+                    String fm = formats(i.encodings);
+                    if (!fm.isEmpty()) addFact(c, facts, R.string.bt_row_formats, fm);
+                    LinearLayout.LayoutParams fp = Ui.lp(-1, -2);
+                    fp.bottomMargin = Ui.dp(c, 10);
+                    body.addView(facts, fp);
+                    TextView note = Ui.text(c, c.getString(R.string.bt_codec), 13, R.color.text_hint);
+                    note.setLineSpacing(0, 1.1f);
+                    note.setPadding(Ui.dp(c, 12), Ui.dp(c, 12), Ui.dp(c, 12), Ui.dp(c, 4));
+                    body.addView(note);
+                    body.addView(settingsButton(c, d));
+                });
     }
 
     /** Live readout from the sound engine, refreshed twice a second while the sheet is open. */
@@ -192,15 +207,23 @@ public final class BtSheet {
         card.setLayoutParams(cp);
         final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
         final Runnable[] tick = new Runnable[1];
+        final String[] last = new String[labels.length];
         tick[0] = () -> {
             if (!d.isShowing()) return;
             BtDsp.Stats s = BtDspProcessor.INSTANCE.stats();
             boolean live = System.nanoTime() - s.stampNs < 1_500_000_000L && s.stampNs != 0;
-            v[0].setText(live && !Float.isNaN(s.lufsI) ? String.format(Locale.US, "%.1f LUFS", s.lufsI) : "-");
-            v[1].setText(live ? String.format(Locale.US, "%+.1f dB", s.normDb) : "-");
-            v[2].setText(live ? String.format(Locale.US, "-%.1f dB", s.compDb) : "-");
-            v[3].setText(live ? String.format(Locale.US, "%.1f dB", s.limDb) : "-");
-            v[4].setText(live ? String.format(Locale.US, "%.1f dBFS", s.peakDb) : "-");
+            String[] now = {
+                    live && !Float.isNaN(s.lufsI) ? String.format(Locale.US, "%.1f LUFS", s.lufsI) : "-",
+                    live ? String.format(Locale.US, "%+.1f dB", s.normDb) : "-",
+                    live ? String.format(Locale.US, "-%.1f dB", s.compDb) : "-",
+                    live ? String.format(Locale.US, "%.1f dB", s.limDb) : "-",
+                    live ? String.format(Locale.US, "%.1f dBFS", s.peakDb) : "-"};
+            for (int k = 0; k < now.length; k++) {
+                if (!now[k].equals(last[k])) {
+                    last[k] = now[k];
+                    v[k].setText(now[k]);
+                }
+            }
             h.postDelayed(tick[0], 500);
         };
         h.post(tick[0]);

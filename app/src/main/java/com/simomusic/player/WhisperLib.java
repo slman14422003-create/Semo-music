@@ -24,7 +24,7 @@ final class WhisperLib {
 
     static native void nativeCancel();
 
-    static native int nativeTranscribe(long ctx, float[] pcm, int threads, String lang, boolean words);
+    static native int nativeTranscribe(long ctx, float[] pcm, int threads, String lang, boolean words, String prompt);
 
     static native int nativeCount();
 

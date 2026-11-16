@@ -42,6 +42,10 @@ public final class Glass {
     }
 
     public static void sheet(View root, final boolean card) {
+        sheet(root, card, false);
+    }
+
+    public static void sheet(View root, final boolean card, boolean frozen) {
         Context c = root.getContext();
         final int r = Ui.dp(c, 32);
         Activity a = activity(c);
@@ -53,6 +57,7 @@ public final class Glass {
             g.setSheet(!card);
             g.setGpu(true);
             g.setTicking(true);
+            g.setFrozen(frozen);
             root.setBackground(g);
         } else {
             root.setBackground(new SnapGlass(c, snapshot(c), r, card));

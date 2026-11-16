@@ -393,10 +393,10 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         hideState();
         MediaController m = Pb.get();
         long pos = m != null ? Math.max(0, m.getCurrentPosition()) : 0;
-        int idx = l.synced ? indexFor(pos + LOOKAHEAD) : -1;
+        int idx = l.synced ? indexFor(pos + LOOKAHEAD + offset()) : -1;
         active = idx;
         following = true;
-        boolean aiOk = WhisperEngine.supported() && !aiBusy && audioUri != null && l.lines.length >= 4
+        boolean aiOk = (WhisperEngine.supported() || hasGroqKey()) && !aiBusy && audioUri != null && l.lines.length >= 4
                 && (l.estimated || !l.synced) && !"ai".equals(l.source);
         String base = getString(l.estimated ? R.string.lyrics_estimated : R.string.lyrics_not_synced);
         boolean gen = "ai-gen".equals(l.source);
@@ -418,7 +418,12 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
 
     private void startAiSync() {
         final LyricsRepo.Lyrics cur = lyrics;
-        if (cur == null || aiBusy || audioUri == null || !WhisperEngine.supported()) return;
+        if (cur == null || aiBusy || audioUri == null) return;
+        if (hasGroqKey()) {
+            runAiSync(cur);
+            return;
+        }
+        if (!WhisperEngine.supported()) return;
         if (WhisperEngine.hasModel(this)) {
             runAiSync(cur);
             return;
@@ -467,18 +472,27 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         badge.setClickable(false);
         badge.setText(R.string.ai_sync_working);
         Ui.toast(this, R.string.ai_sync_working);
+        String gk = Store.groqKey(this);
         AiSync.run(getApplicationContext(), k, audioUri, cur, durMs, WhisperEngine.guessLang(cur.lines),
-                new WhisperEngine(), () -> isDestroyed() || !k.equals(currentKey), (l, status) -> {
+                new WhisperEngine(), hasGroqKey() ? gk.trim() : null, () -> isDestroyed() || !k.equals(currentKey), (l, status) -> {
                     aiBusy = false;
                     if (isDestroyed() || !k.equals(currentKey)) return;
                     if (status == AiSync.DONE && l != null) {
                         Ui.toast(this, R.string.ai_sync_done);
                         apply(l, LyricsRepo.OK);
                     } else {
-                        Ui.toast(this, status == AiSync.WEAK ? R.string.ai_sync_weak : R.string.ai_sync_failed);
+                        if (status == AiSync.BAD_KEY) Store.setGroqKey(this, "");
+                        Ui.toast(this, status == AiSync.WEAK ? R.string.ai_sync_weak
+                                : status == AiSync.BAD_KEY ? R.string.ai_gen_bad_key
+                                : status == AiSync.LIMIT ? R.string.ai_gen_limit : R.string.ai_sync_failed);
                         if (lyrics != null) apply(lyrics, LyricsRepo.OK);
                     }
                 });
+    }
+
+    private boolean hasGroqKey() {
+        String k = Store.groqKey(this);
+        return k != null && !k.trim().isEmpty();
     }
 
     // ------------------------------------------------------------------ AI lyrics (no lyrics found online)
@@ -579,6 +593,34 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         rv.animate().alpha(1f).setDuration(Motion.LONG).setInterpolator(Motion.ENTER).start();
     }
 
+    private String offKey = "";
+    private long offMs;
+
+    private long offset() {
+        String k = currentKey;
+        if (!k.equals(offKey)) {
+            offKey = k;
+            offMs = k.isEmpty() ? 0 : Store.prefs(this).getLong("lyr_off_" + k, 0L);
+        }
+        return offMs;
+    }
+
+    private void shiftOffset(long delta) {
+        String k = currentKey;
+        if (k.isEmpty()) return;
+        long cur = offset();
+        offMs = delta == 0 ? 0 : Math.max(-5000L, Math.min(5000L, cur + delta));
+        if (offMs == 0) Store.prefs(this).edit().remove("lyr_off_" + k).apply();
+        else Store.prefs(this).edit().putLong("lyr_off_" + k, offMs).apply();
+        Ui.toast(this, getString(R.string.lyrics_offset_now, offMs / 1000f));
+        MediaController m = Pb.get();
+        if (m != null && lyrics != null && lyrics.synced) {
+            int idx = indexFor(Math.max(0, m.getCurrentPosition()) + LOOKAHEAD + offMs);
+            setActive(idx);
+            if (idx >= 0) centerOn(idx, true);
+        }
+    }
+
     private int indexFor(long t) {
         LyricsRepo.Lyrics l = lyrics;
         if (l == null || !l.synced || l.times.length == 0) return -1;
@@ -612,7 +654,7 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
         if (dur > 0) durMs = dur;
         bar.set(pos, durMs);
         if (lyrics == null || !lyrics.synced) return;
-        int idx = indexFor(pos + LOOKAHEAD);
+        int idx = indexFor(pos + LOOKAHEAD + offset());
         if (idx != active) {
             setActive(idx);
             if (following && idx >= 0) centerOn(idx, true);
@@ -821,6 +863,11 @@ public class LyricsActivity extends AppCompatActivity implements FullBleed {
                 if (lastQuery != null) LyricsRepo.forget(getApplicationContext(), lastQuery.key);
                 bind(true);
             }));
+            if (lyrics != null && lyrics.synced) {
+                l.add(Sheet.item(R.drawable.ic_prev, getString(R.string.lyrics_offset_earlier), false, true, () -> shiftOffset(250)));
+                l.add(Sheet.item(R.drawable.ic_next, getString(R.string.lyrics_offset_later), false, true, () -> shiftOffset(-250)));
+                l.add(Sheet.item(R.drawable.ic_refresh, getString(R.string.lyrics_offset_reset), false, true, () -> shiftOffset(0)));
+            }
             l.add(Sheet.divider());
             CharSequence[] labels = {getString(R.string.lyrics_size_s), getString(R.string.lyrics_size_m), getString(R.string.lyrics_size_l)};
             l.add(Sheet.chips(labels, sizeIndex(), 3, i -> {

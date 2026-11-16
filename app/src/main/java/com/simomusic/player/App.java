@@ -50,6 +50,7 @@ public class App extends Application {
             android.os.StrictMode.setVmPolicy(new android.os.StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().detectLeakedRegistrationObjects().penaltyLog().build());
         }
         CrashGuard.install(this);
+        CrashGuard.logExits(this);
         Accent.applyMode(this);
         MemoryGuard.install(this);   // covers are released when Android is short of memory
         final android.content.Context appCtx = this;

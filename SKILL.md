@@ -199,3 +199,16 @@ description: Progress log and working notes for the SimoMusic Android app (packa
 - PlayerService: DefaultLoadControl (15 s min, 40 s max buffer, quick start), platform diagnostics off. App: StrictMode logging in debug builds only.
 - LockHandoff.java: LockActivity.unlock records the on-screen cover box (including drag offset); PlayerPanel.expandFromLock fades the player in and flies its cover from that box to its own place, other rows rise in sequence. Falls back to the normal slide-up when no fresh handoff exists (4 s window).
 - Not compiled in the sandbox: build once and test unlock slow / fast, and an update download.
+
+# Stability + lock screen lag pass
+- WavePainter (flat seek bar, used by the lock screen and the full player) redrew on every vsync for as long as music played (the "waving" flag kept it busy). Now only easing / dragging use postInvalidateOnAnimation; the steady wave idles at idleMs (33 ms player, 50 ms lock via WaveSeekBar.setIdleFrameMs).
+- Ui.highRefresh skips LockActivity: the lock screen no longer forces the maximum display refresh rate.
+- Halo and ArtGlow: hasOverlappingRendering = false (no offscreen layer while the alpha / scale animates); ArtGlow no longer keeps a screen-sized hardware layer.
+- BtDspProcessor: the sound engine can no longer kill the app. Any RuntimeException in configure / process falls back to untouched audio (flag broken, reset on the next format change), NaN / infinity in a chunk wipes the chunk and resets the filters. BtDsp.process computes the headroom pow() once per block instead of once per sample.
+- BtAudio volume poll only runs while playing.
+- MediaWatcher: file-system sweep every 5 min (was 1 min), on a background-priority thread, skipped in battery saver or during a gesture.
+- MemoryGuard: when the app is hidden and nothing plays, all cover bitmaps are released (smaller process, less likely to be killed when another app such as the browser opens).
+- CrashGuard: OutOfMemoryError on a side thread frees the covers; logExits() (Android 11+) writes why the previous run ended (low memory, native crash, ANR, killed) to crash_report.txt and offers the report on next start for native crash / ANR / init failure / excessive resource usage. A sudden close now always leaves a cause in the report (Settings share, or the prompt).
+- LockActivity.onCreate also survives OutOfMemoryError while building the screen.
+- README.md removed (never wanted).
+- Not verified on a device (no compiler in the sandbox): test lock screen wake with music playing, swipe up, unlock into the player, open the browser from the app and come back, Bluetooth on / off during playback.

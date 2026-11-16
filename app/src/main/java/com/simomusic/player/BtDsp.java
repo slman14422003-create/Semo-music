@@ -408,6 +408,7 @@ public final class BtDsp {
         final double ceil = Math.pow(10, p.ceilingDb / 20);
         final boolean norm = !Float.isNaN(p.targetLufs);
         final int D = lookN - 1;
+        final double headK = Math.pow(10, -headroomDb / 20);
         for (int n = 0; n < frames; n++) {
             double l = buf[n * ch], r = st ? buf[n * ch + 1] : l;
 
@@ -423,7 +424,7 @@ public final class BtDsp {
 
             // ---- normalization + EQ headroom
             normLinSm += (normLin - normLinSm) * 0.0015;
-            double pre = normLinSm * Math.pow(10, -headroomDb / 20);
+            double pre = normLinSm * headK;
             l *= pre;
             r *= pre;
             for (int i = 0; i < BANDS; i++) {

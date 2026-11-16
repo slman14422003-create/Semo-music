@@ -19,6 +19,7 @@ public final class BtDspProcessor extends BaseAudioProcessor {
 
     private final BtDsp dsp = new BtDsp();
     private boolean isFloat, wasActive;
+    private volatile boolean broken;
     private int channels = 2;
     private float[] work = new float[0];
     private int seed = 0x9E3779B9;
@@ -42,7 +43,13 @@ public final class BtDspProcessor extends BaseAudioProcessor {
         }
         isFloat = pcmF;
         channels = in.channelCount;
-        dsp.configure(in.sampleRate, channels);
+        try {
+            dsp.configure(in.sampleRate, channels);
+        } catch (RuntimeException e) {
+            CrashGuard.nonFatal("sound engine configure", e);
+            throw new UnhandledAudioFormatException(in);
+        }
+        broken = false;
         wasActive = false;
         return in;
     }
@@ -51,13 +58,30 @@ public final class BtDspProcessor extends BaseAudioProcessor {
     public void queueInput(ByteBuffer in) {
         int bytes = in.remaining();
         if (bytes == 0) return;
-        if (!dsp.enabled()) {
+        if (broken || !dsp.enabled()) {
             wasActive = false;
             ByteBuffer out = replaceOutputBuffer(bytes);
             out.put(in);
             out.flip();
             return;
         }
+        final int startPos = in.position();
+        try {
+            processChunk(in, bytes);
+        } catch (RuntimeException e) {
+            // a sound-engine problem must never take the player (and the whole app) down: play this and every
+            // following chunk untouched until the next format change
+            broken = true;
+            wasActive = false;
+            CrashGuard.nonFatal("sound engine", e);
+            in.position(startPos);
+            ByteBuffer out = replaceOutputBuffer(bytes);
+            out.put(in);
+            out.flip();
+        }
+    }
+
+    private void processChunk(ByteBuffer in, int bytes) {
         if (!wasActive) {
             dsp.reset();
             wasActive = true;
@@ -76,25 +100,44 @@ public final class BtDspProcessor extends BaseAudioProcessor {
             tail.flip();
         }
         dsp.process(work, frames);
+        clean(n);
         ByteBuffer out = replaceOutputBuffer(n * per + rest);
         write(out, work, n);
         if (tail != null) out.put(tail);
         out.flip();
     }
 
+    /** A single NaN / infinity would stay inside the filters for ever (silence or noise): wipe the chunk and restart the filters. */
+    private void clean(int n) {
+        for (int i = 0; i < n; i++) {
+            float v = work[i];
+            if (v != v || v > 1e6f || v < -1e6f) {
+                dsp.reset();
+                java.util.Arrays.fill(work, 0, n, 0f);
+                return;
+            }
+        }
+    }
+
     @Override
     protected void onQueueEndOfStream() {
         // push the limiter's look-ahead (about 1.5 ms) out so the last samples of a song are not lost
-        if (!wasActive || !dsp.enabled()) return;
-        int frames = dsp.latency();
-        if (frames <= 0) return;
-        int n = frames * channels;
-        if (work.length < n) work = new float[n];
-        java.util.Arrays.fill(work, 0, n, 0f);
-        dsp.process(work, frames);
-        ByteBuffer out = replaceOutputBuffer(n * (isFloat ? 4 : 2));
-        write(out, work, n);
-        out.flip();
+        if (broken || !wasActive || !dsp.enabled()) return;
+        try {
+            int frames = dsp.latency();
+            if (frames <= 0) return;
+            int n = frames * channels;
+            if (work.length < n) work = new float[n];
+            java.util.Arrays.fill(work, 0, n, 0f);
+            dsp.process(work, frames);
+            clean(n);
+            ByteBuffer out = replaceOutputBuffer(n * (isFloat ? 4 : 2));
+            write(out, work, n);
+            out.flip();
+        } catch (RuntimeException e) {
+            broken = true;
+            CrashGuard.nonFatal("sound engine end", e);
+        }
     }
 
     private void write(ByteBuffer out, float[] x, int n) {

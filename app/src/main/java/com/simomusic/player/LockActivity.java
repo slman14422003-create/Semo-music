@@ -75,7 +75,7 @@ public class LockActivity extends AppCompatActivity implements FullBleed {
         }
         try {
             buildUi();
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | OutOfMemoryError e) {
             // a lock-screen problem must never take the app down: log it and close quietly, the system lock screen stays usable
             CrashGuard.nonFatal("lock screen build", e);
             finish();

@@ -82,6 +82,11 @@ public final class Halo extends View {
     }
 
     @Override
+    public boolean hasOverlappingRendering() {
+        return false;
+    }
+
+    @Override
     public void onVisibilityAggregated(boolean visible) {
         super.onVisibilityAggregated(visible);
         shown = visible;

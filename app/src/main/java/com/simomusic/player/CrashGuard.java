@@ -38,6 +38,12 @@ public final class CrashGuard {
             }
             // a failed background worker (covers, lyrics, scans, network) is logged and survived: only the main thread
             // and the player's own threads are fatal, so the app no longer closes by itself because of a side task
+            if (e instanceof OutOfMemoryError) {
+                try {
+                    Art.trim(true);
+                } catch (Throwable ignored) {
+                }
+            }
             if (!fatalThread(t)) {
                 Log.w("SimoMusic", "survived crash on " + t.getName(), e);
                 return;
@@ -53,6 +59,62 @@ public final class CrashGuard {
         return n.contains("ExoPlayer") || n.contains("Playback") || n.contains("Media") || n.contains("main");
     }
 
+    private static String reasonName(int r) {
+        switch (r) {
+            case 1: return "EXIT_SELF";
+            case 2: return "SIGNALED (killed by the system or a task killer)";
+            case 3: return "LOW_MEMORY (the system needed the memory)";
+            case 4: return "CRASH (java)";
+            case 5: return "CRASH_NATIVE";
+            case 6: return "ANR (app not responding)";
+            case 7: return "INITIALIZATION_FAILURE";
+            case 8: return "PERMISSION_CHANGE";
+            case 9: return "EXCESSIVE_RESOURCE_USAGE";
+            case 10: return "USER_REQUESTED";
+            case 11: return "USER_STOPPED";
+            case 12: return "DEPENDENCY_DIED";
+            case 13: return "OTHER";
+            case 14: return "FREEZER";
+            case 15: return "PACKAGE_STATE_CHANGE";
+            case 16: return "PACKAGE_UPDATED";
+            default: return "REASON_" + r;
+        }
+    }
+
+    /**
+     * Android 11+: asks the system why the previous run of the app ended and writes it to the report. Closes that never
+     * pass through the java crash handler (killed for memory, native crash, not responding, killed while in the
+     * background) show up here, so a sudden close always leaves a visible cause.
+     */
+    public static void logExits(final Application a) {
+        if (Build.VERSION.SDK_INT < 30) return;
+        Bg.io("exit reasons", () -> {
+            android.app.ActivityManager am = (android.app.ActivityManager) a.getSystemService(Context.ACTIVITY_SERVICE);
+            if (am == null) return;
+            java.util.List<android.app.ApplicationExitInfo> list = am.getHistoricalProcessExitReasons(a.getPackageName(), 0, 8);
+            android.content.SharedPreferences sp = Store.prefs(a);
+            long seen = sp.getLong("exit_seen", 0L), newest = seen;
+            boolean alarming = false;
+            for (android.app.ApplicationExitInfo x : list) {
+                long ts = x.getTimestamp();
+                if (ts <= seen) continue;
+                newest = Math.max(newest, ts);
+                int r = x.getReason();
+                String desc = x.getDescription();
+                String body = "process=" + x.getProcessName() + " importance=" + x.getImportance()
+                        + " rssKb=" + x.getRss() + " pssKb=" + x.getPss()
+                        + (desc == null || desc.isEmpty() ? "" : " description=" + desc);
+                try {
+                    appendRaw("previous run ended: " + reasonName(r), body);
+                } catch (Exception ignored) {
+                }
+                if (r == 5 || r == 6 || r == 7 || r == 9) alarming = true;
+            }
+            if (newest != seen) sp.edit().putLong("exit_seen", newest).apply();
+            if (alarming) sp.edit().putBoolean("crash_unseen", true).apply();
+        });
+    }
+
     /** A problem the app recovered from by itself: logged, the app keeps running. */
     public static void nonFatal(String where, Throwable t) {
         Log.w("SimoMusic", where, t);
@@ -62,14 +124,18 @@ public final class CrashGuard {
         }
     }
 
-    private static synchronized void append(String title, Throwable t) throws Exception {
+    private static void append(String title, Throwable t) throws Exception {
+        appendRaw(title, Log.getStackTraceString(t));
+    }
+
+    private static synchronized void appendRaw(String title, String body) throws Exception {
         if (app == null) return;
         File f = new File(app.getFilesDir(), FILE);
         StringBuilder sb = new StringBuilder();
         sb.append("==== ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date())).append("  ").append(title).append('\n');
         sb.append("SimoMusic ").append(version()).append(" | Android ").append(Build.VERSION.RELEASE).append(" (API ").append(Build.VERSION.SDK_INT)
                 .append(") | ").append(Build.MANUFACTURER).append(' ').append(Build.MODEL).append('\n');
-        sb.append(Log.getStackTraceString(t)).append('\n');
+        sb.append(body).append('\n');
         try (FileOutputStream o = new FileOutputStream(f, true)) {
             o.write(sb.toString().getBytes("UTF-8"));
         }

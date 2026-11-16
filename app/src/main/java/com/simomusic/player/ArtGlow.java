@@ -21,7 +21,11 @@ public final class ArtGlow extends View {
         super(c);
         setAlpha(0f);
         setClickable(false);
-        setLayerType(LAYER_TYPE_HARDWARE, null);
+    }
+
+    @Override
+    public boolean hasOverlappingRendering() {
+        return false;
     }
 
     /** color 0 = no glow (grey / missing cover). */

@@ -35,6 +35,10 @@ public final class WaveSeekBar extends AppCompatSeekBar {
         }
     }
 
+    public void setIdleFrameMs(int ms) {
+        if (wp != null) wp.idleMs(ms);
+    }
+
     public void setDragging(boolean on) {
         if (wp == null) return;
         wp.dragging(on);

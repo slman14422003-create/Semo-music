@@ -115,6 +115,7 @@ public final class NowPlaying implements Player.Listener {
         seekBlock.setOrientation(LinearLayout.VERTICAL);
         seekBlock.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
         seek = new WaveSeekBar(c);
+        if (lock) seek.setIdleFrameMs(50);
         seek.setContentDescription(c.getString(R.string.seek_bar));
         seek.setPadding(Ui.dp(c, 8), 0, Ui.dp(c, 8), 0);
         seek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {

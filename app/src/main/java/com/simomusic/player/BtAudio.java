@@ -80,7 +80,7 @@ public final class BtAudio {
         @Override
         public void run() {
             try {
-                if (am != null && contour(app)) {
+                if (am != null && contour(app) && player.isPlaying()) {
                     int v = am.getStreamVolume(AudioManager.STREAM_MUSIC);
                     if (v != lastVol) {
                         lastVol = v;

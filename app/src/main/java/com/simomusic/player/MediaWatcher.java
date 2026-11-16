@@ -28,13 +28,20 @@ public final class MediaWatcher {
     }
 
     private static final long DELAY_MS = 800;
-    private static final long TICK_MS = 60000;
+    private static final long TICK_MS = 300000;
     private static final long WALK_BUDGET_MS = 4000;
     private static final int MAX_DEPTH = 12;
     private static final int MAX_DIRS = 6000;
     private static boolean started;
     private static ContentObserver observer;
-    private static final ExecutorService IO = Executors.newSingleThreadExecutor();
+    private static final ExecutorService IO = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(() -> {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            r.run();
+        }, "media-sweep");
+        t.setDaemon(true);
+        return t;
+    });
     private static final AtomicBoolean walking = new AtomicBoolean();
     private static final java.util.Map<String, Integer> tries = new java.util.HashMap<>();
 
@@ -50,7 +57,7 @@ public final class MediaWatcher {
             public void run() {
                 androidx.media3.session.MediaController m = Pb.get();
                 boolean playing = m != null && m.isPlaying();
-                if (App.visibleCount() > 0 && !playing && Perms.hasAudio(app)) sweep(app);
+                if (App.visibleCount() > 0 && !playing && !Gest.busy && !PowerSaver.on(app) && Perms.hasAudio(app)) sweep(app);
                 h.postDelayed(this, TICK_MS);
             }
         };

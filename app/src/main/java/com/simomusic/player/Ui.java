@@ -196,6 +196,7 @@ public final class Ui {
      * lower, which is the "slightly laggy" feel even when nothing is slow.
      */
     public static void highRefresh(android.app.Activity a) {
+        if (a instanceof LockActivity) return;      // the lock screen stays at the normal rate: cooler, lighter on the system
         if (PowerSaver.on(a)) return;      // battery saver keeps the normal refresh rate
         try {
             android.view.Display d = a.getWindowManager().getDefaultDisplay();

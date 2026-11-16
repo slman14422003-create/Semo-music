@@ -19,8 +19,14 @@ public final class MemoryGuard implements ComponentCallbacks2 {
 
     @Override
     public void onTrimMemory(int level) {
+        boolean playing = false;
+        try {
+            androidx.media3.session.MediaController m = Pb.get();
+            playing = m != null && m.isPlaying();
+        } catch (RuntimeException ignored) {
+        }
         if (level >= TRIM_MEMORY_BACKGROUND || level == TRIM_MEMORY_RUNNING_CRITICAL) Art.trim(true);
-        else if (level >= TRIM_MEMORY_UI_HIDDEN) Art.trim(false);
+        else if (level >= TRIM_MEMORY_UI_HIDDEN) Art.trim(!playing);
     }
 
     @Override

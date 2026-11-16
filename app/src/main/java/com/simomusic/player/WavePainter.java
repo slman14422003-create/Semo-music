@@ -100,6 +100,12 @@ final class WavePainter {
         cv.drawCircle(px, cy, rad - Math.max(Ui.dp(v.getContext(), 2), rad * 0.3f), light ? inner : thumb);
     }
 
+    private int idleMs = 33;
+
+    void idleMs(int ms) {
+        idleMs = Math.max(16, Math.min(100, ms));
+    }
+
     void waving(boolean on) {
         waving = on;
     }
@@ -124,10 +130,13 @@ final class WavePainter {
 
         if (flat) {
             drawFlat(cv, v, shown, dt);
-            boolean busy = Math.abs(target - shown) > 0.0004f || Math.abs(thumbScale - (dragging ? 1.3f : 1f)) > 0.01f
-                    || amp > 0.02f || waving;
-            if (busy && !Gest.busy) v.postInvalidateOnAnimation();
-            else last = 0;
+            boolean easingFlat = Math.abs(target - shown) > 0.0004f || Math.abs(thumbScale - (dragging ? 1.3f : 1f)) > 0.01f
+                    || Math.abs(goal - amp) > 0.02f;
+            boolean busy = easingFlat || amp > 0.02f || waving;
+            if (busy && !Gest.busy) {
+                if (easingFlat || dragging) v.postInvalidateOnAnimation();
+                else v.postInvalidateDelayed(idleMs);
+            } else last = 0;
             return;
         }
         float left = v.getPaddingLeft() + stroke / 2f;
@@ -165,7 +174,7 @@ final class WavePainter {
                 || Math.abs(goal - amp) > 0.02f;
         if (moving && !Gest.busy) {
             if (easing || dragging) v.postInvalidateOnAnimation();
-            else v.postInvalidateDelayed(32);
+            else v.postInvalidateDelayed(idleMs);
         } else last = 0;
     }
 }

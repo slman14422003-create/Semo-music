@@ -1,0 +1,414 @@
+package com.simomusic.player;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.ListUpdateCallback;
+import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Song rows grouped into rounded cards. Modes: normal (⋮ menu), select (check marks), reorder (drag handle).
+ * An optional header view scrolls together with the rows.
+ */
+public final class TrackAdapter extends RecyclerView.Adapter<TrackAdapter.VH> {
+    public interface Listener {
+        void onClick(Track t, int pos);
+
+        void onMore(Track t, int pos);
+
+        /** Long press on a row; by default it opens the same menu as the ⋮ button. */
+        default boolean onLong(Track t, int pos) {
+            onMore(t, pos);
+            return true;
+        }
+    }
+
+    private static final int ART = 54;
+
+    public final List<Track> data = new ArrayList<>();
+    public final Set<Long> selected = new HashSet<>();
+    public boolean select, reorder;
+    public ItemTouchHelper helper;
+    public View header;
+    private long current = -1;
+    private boolean playing;
+    private final Listener l;
+    private final Context ctx;
+
+    private final int cPrimary, cAccent, cHint;
+    private final android.content.res.ColorStateList tOn, tOff;
+
+    public TrackAdapter(Context c, Listener l) {
+        this.ctx = c;
+        this.l = l;
+        cPrimary = Ui.color(c, R.color.text_primary);
+        cAccent = Ui.color(c, R.color.accent_text);
+        cHint = Ui.color(c, R.color.text_hint);
+        tOn = android.content.res.ColorStateList.valueOf(Ui.color(c, R.color.on_accent));
+        tOff = android.content.res.ColorStateList.valueOf(cHint);
+    }
+
+    private int off() {
+        return header == null ? 0 : 1;
+    }
+
+    private boolean hadHeader;
+
+    /** Skips the whole re-bind when nothing actually changed (onResume refreshes a lot). */
+    public void setData(List<Track> list) {
+        setData(list, false);
+    }
+
+    @SuppressLint("NotifyDataSetChanged")
+    public void setData(List<Track> list, boolean reshuffled) {
+        boolean hdr = header != null;
+        boolean same = list.size() == data.size() && hdr == hadHeader;
+        for (int i = 0; same && i < list.size(); i++) {
+            Track a = list.get(i), b = data.get(i);
+            same = a.id == b.id && a.title.equals(b.title) && a.artist.equals(b.artist);   // a renamed song redraws too
+        }
+        if (same) return;
+        if (hdr == hadHeader && list.size() < data.size() && removeOnly(list)) return;
+        if (hdr == hadHeader && !reshuffled && diff(list)) return;
+        hadHeader = hdr;
+        data.clear();
+        data.addAll(list);
+        notifyDataSetChanged();
+    }
+
+    private boolean diff(final List<Track> list) {
+        int a = data.size(), b = list.size();
+        if (a == 0 || b == 0 || a > 2500 || b > 2500) return false;
+        Set<Long> ids = new HashSet<>(a * 2);
+        for (Track t : data) ids.add(t.id);
+        int common = 0;
+        for (Track t : list) if (ids.contains(t.id)) common++;
+        if (common * 10 < Math.max(a, b) * 6) return false;
+        final List<Track> old = new ArrayList<>(data);
+        DiffUtil.DiffResult r = DiffUtil.calculateDiff(new DiffUtil.Callback() {
+            @Override
+            public int getOldListSize() {
+                return old.size();
+            }
+
+            @Override
+            public int getNewListSize() {
+                return list.size();
+            }
+
+            @Override
+            public boolean areItemsTheSame(int o, int n) {
+                return old.get(o).id == list.get(n).id;
+            }
+
+            @Override
+            public boolean areContentsTheSame(int o, int n) {
+                Track x = old.get(o), y = list.get(n);
+                return x == y || (x.title.equals(y.title) && x.artist.equals(y.artist));
+            }
+        }, true);
+        data.clear();
+        data.addAll(list);
+        final int o = off();
+        r.dispatchUpdatesTo(new ListUpdateCallback() {
+            @Override
+            public void onInserted(int position, int count) {
+                notifyItemRangeInserted(position + o, count);
+            }
+
+            @Override
+            public void onRemoved(int position, int count) {
+                notifyItemRangeRemoved(position + o, count);
+            }
+
+            @Override
+            public void onMoved(int from, int to) {
+                notifyItemMoved(from + o, to + o);
+            }
+
+            @Override
+            public void onChanged(int position, int count, Object payload) {
+                notifyItemRangeChanged(position + o, count, payload);
+            }
+        });
+        notifyItemRangeChanged(o, data.size(), "shape");
+        return true;
+    }
+
+    /** When the new list is the old one minus some songs (a delete), the missing rows slide out one by one. */
+    private boolean removeOnly(List<Track> list) {
+        int j = 0;
+        for (int i = 0; i < data.size() && j < list.size(); i++) {
+            if (data.get(i).id == list.get(j).id) j++;
+        }
+        if (j != list.size()) return false;
+        j = list.size() - 1;
+        for (int i = data.size() - 1; i >= 0; i--) {
+            if (j >= 0 && data.get(i).id == list.get(j).id) {
+                data.set(i, list.get(j));
+                j--;
+            } else {
+                data.remove(i);
+                notifyItemRemoved(i + off());
+            }
+        }
+        final int n = data.size();
+        if (n > 0) {                  // the first / last rows change their rounded corners
+            notifyItemChanged(off());
+            if (n > 1) notifyItemChanged(n - 1 + off());
+        }
+        return true;
+    }
+
+    /** Play / pause: only the current row's equalizer changes. */
+    public void setPlaying(boolean p) {
+        if (p == playing) return;
+        playing = p;
+        for (int i = 0; i < data.size(); i++) {
+            if (data.get(i).id == current) {
+                notifyItemChanged(i + off());
+                break;
+            }
+        }
+    }
+
+    /** Only the previously playing and the newly playing rows are re-drawn. */
+    public void setCurrent(long id) {
+        if (id == current) return;
+        long old = current;
+        current = id;
+        for (int i = 0; i < data.size(); i++) {
+            long t = data.get(i).id;
+            if (t == old || t == id) notifyItemChanged(i + off());
+        }
+    }
+
+    public void toggle(int pos) {
+        long id = data.get(pos).id;
+        if (!selected.remove(id)) selected.add(id);
+        notifyItemChanged(pos + off());
+    }
+
+    /** Turns the check-mark mode on / off for every visible row at once. */
+    public void setSelectMode(boolean on) {
+        if (select == on && (on || selected.isEmpty())) return;
+        select = on;
+        if (!on) selected.clear();
+        notifyItemRangeChanged(0, getItemCount());
+    }
+
+    public void selectAll() {
+        for (Track t : data) selected.add(t.id);
+        notifyItemRangeChanged(0, getItemCount());
+    }
+
+    /** The selected songs, in list order. */
+    public List<Track> selectedTracks() {
+        List<Track> out = new ArrayList<>();
+        for (Track t : data) if (selected.contains(t.id)) out.add(t);
+        return out;
+    }
+
+    static final class VH extends RecyclerView.ViewHolder {
+        final LinearLayout card;
+        final ImageView art, check;
+        final TextView title, sub;
+        final ImageButton more, handle;
+        View scrim;
+        EqView eq;
+        // what this row currently shows: bind only touches what really changed (a fling re-binds rows constantly)
+        int shapeState = -1, tint = -1;
+        Track bound;
+        int titleColor;
+        boolean curShown, selShown, selectMode, reorderMode;
+
+        VH(FrameLayout headerHolder) {
+            super(headerHolder);
+            card = null;
+            art = null;
+            check = null;
+            title = null;
+            sub = null;
+            more = null;
+            handle = null;
+        }
+
+        VH(FrameLayout root, LinearLayout card, ImageView art, TextView title, TextView sub, ImageButton more,
+           ImageButton handle, ImageView check) {
+            super(root);
+            this.card = card;
+            this.art = art;
+            this.title = title;
+            this.sub = sub;
+            this.more = more;
+            this.handle = handle;
+            this.check = check;
+        }
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return header != null && position == 0 ? 1 : 0;
+    }
+
+    @NonNull
+    @Override
+    public VH onCreateViewHolder(@NonNull ViewGroup parent, int type) {
+        Context c = parent.getContext();
+        FrameLayout root = new FrameLayout(c);
+        root.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (type == 1) return new VH(root);
+        root.setPadding(Ui.dp(c, 16), Ui.dp(c, 2), Ui.dp(c, 16), Ui.dp(c, 2));
+        LinearLayout card = new LinearLayout(c);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPaddingRelative(Ui.dp(c, 12), Ui.dp(c, 11), Ui.dp(c, 4), Ui.dp(c, 11));
+        card.setDuplicateParentStateEnabled(true);
+        root.addView(card, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        ImageView art = Ui.artView(c, ART, 16);
+        FrameLayout artBox = new FrameLayout(c);
+        artBox.addView(art);
+        View scrim = new View(c);
+        scrim.setBackgroundColor(0x88000000);
+        Ui.round(scrim, c.getResources().getDimensionPixelSize(R.dimen.radius_thumb));
+        scrim.setVisibility(View.GONE);
+        artBox.addView(scrim, new FrameLayout.LayoutParams(Ui.dp(c, ART), Ui.dp(c, ART)));
+        EqView eq = new EqView(c);
+        eq.setVisibility(View.GONE);
+        artBox.addView(eq, new FrameLayout.LayoutParams(Ui.dp(c, 18), Ui.dp(c, 18), Gravity.CENTER));
+        card.addView(artBox, Ui.lp(Ui.dp(c, ART), Ui.dp(c, ART)));
+        LinearLayout col = new LinearLayout(c);
+        col.setOrientation(LinearLayout.VERTICAL);
+        TextView title = Ui.text(c, "", 16, R.color.text_primary);
+        title.setTypeface(Ui.medium());
+        title.setSingleLine(true);
+        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        TextView sub = Ui.text(c, "", 13, R.color.text_secondary);
+        sub.setSingleLine(true);
+        sub.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        sub.setPadding(0, Ui.dp(c, 3), 0, 0);
+        col.addView(title);
+        col.addView(sub);
+        LinearLayout.LayoutParams cp = Ui.weight(1);
+        cp.setMarginStart(Ui.dp(c, 14));
+        cp.setMarginEnd(Ui.dp(c, 6));
+        card.addView(col, cp);
+
+        ImageView check = new ImageView(c);
+        check.setImageResource(R.drawable.ic_check);
+        check.setBackgroundResource(R.drawable.bg_circle_check);
+        check.setPadding(Ui.dp(c, 5), Ui.dp(c, 5), Ui.dp(c, 5), Ui.dp(c, 5));
+        LinearLayout.LayoutParams kp = Ui.lp(Ui.dp(c, 28), Ui.dp(c, 28));
+        kp.setMarginEnd(Ui.dp(c, 10));
+        card.addView(check, kp);
+        ImageButton more = Ui.flatPlain(c, R.drawable.ic_more, 48, R.string.more, null);
+        card.addView(more);
+        ImageButton handle = Ui.flatPlain(c, R.drawable.ic_sort, 48, R.string.reorder, null);
+        card.addView(handle);
+        final VH h = new VH(root, card, art, title, sub, more, handle, check);
+        h.scrim = scrim;
+        h.eq = eq;
+        // listeners are created once per row view, not on every bind
+        h.itemView.setOnClickListener(v -> {
+            int p = h.getBindingAdapterPosition() - off();
+            if (p < 0 || p >= data.size()) return;
+            if (select) toggle(p);
+            l.onClick(data.get(p), p);
+        });
+        h.itemView.setOnLongClickListener(v -> {
+            int p = h.getBindingAdapterPosition() - off();
+            if (select || reorder || p < 0 || p >= data.size()) return false;
+            Ui.tap(v);
+            return l.onLong(data.get(p), p);
+        });
+        h.more.setOnClickListener(v -> {
+            int p = h.getBindingAdapterPosition() - off();
+            if (p >= 0 && p < data.size()) l.onMore(data.get(p), p);
+        });
+        h.handle.setOnTouchListener((v, e) -> {
+            if (e.getActionMasked() == MotionEvent.ACTION_DOWN && helper != null) helper.startDrag(h);
+            return false;
+        });
+        return h;
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public void onBindViewHolder(@NonNull final VH h, int position) {
+        if (h.itemView.getStateListAnimator() == null) Ui.press(h.itemView.getContext(), h.itemView);
+        if (h.card == null) {
+            FrameLayout f = (FrameLayout) h.itemView;
+            if (header != null && header.getParent() != f) {
+                if (header.getParent() instanceof ViewGroup) ((ViewGroup) header.getParent()).removeView(header);
+                f.removeAllViews();
+                f.addView(header);
+            }
+            return;
+        }
+        final int pos = position - off();
+        final Track t = data.get(pos);
+        boolean isCur = t.id == current;
+        boolean sel = select && selected.contains(t.id);
+        if (h.bound != t) {      // a rescan hands out new Track objects, so a renamed song is redrawn too
+            h.bound = t;
+            h.title.setText(t.title);
+            h.sub.setText(Fmt.artist(ctx, t.artist) + " \u00B7 " + Fmt.time(t.duration));
+        }
+        int tc = isCur ? cAccent : cPrimary;
+        if (tc != h.titleColor) {
+            h.titleColor = tc;
+            h.title.setTextColor(tc);
+        }
+        Art.load(ctx, t.uri, h.art, Ui.dp(ctx, ART));
+        // the card background (a ripple drawable) is rebuilt only when its look really changes
+        boolean hi = sel || isCur;
+        // the current/selected row keeps the same corners as its neighbours (only the colour changes), so the
+        // grouped card list stays one even, coordinated shape instead of a bulging pill between small corners
+        boolean top = pos == 0, bottom = pos == data.size() - 1;
+        int shape = (top ? 1 : 0) | (bottom ? 2 : 0) | (hi ? 4 : 0);
+        if (shape != h.shapeState) {
+            h.shapeState = shape;
+            Ui.flatRow(ctx, h.card, hi, !bottom, 98,
+                    hi ? (Ui.color(ctx, R.color.accent) & 0x00FFFFFF) | 0x55000000 : 0);
+        }
+        boolean mark = isCur && !select;
+        if (mark != h.curShown || h.tint == -1) {
+            h.scrim.setVisibility(mark ? View.VISIBLE : View.GONE);
+            h.eq.setVisibility(mark ? View.VISIBLE : View.GONE);
+        }
+        h.eq.setAnimating(mark && playing);
+        if (h.selectMode != select || h.reorderMode != reorder || h.tint == -1) {
+            h.check.setVisibility(select ? View.VISIBLE : View.GONE);
+            h.more.setVisibility(select || reorder ? View.GONE : View.VISIBLE);
+            h.handle.setVisibility(reorder ? View.VISIBLE : View.GONE);
+        }
+        h.check.setSelected(sel);
+        if (select) androidx.core.widget.ImageViewCompat.setImageTintList(h.check, sel ? tOn : tOff);
+        h.curShown = mark;
+        h.selectMode = select;
+        h.reorderMode = reorder;
+        h.tint = 0;
+    }
+
+    @Override
+    public int getItemCount() {
+        return data.size() + off();
+    }
+}

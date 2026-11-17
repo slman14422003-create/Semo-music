@@ -468,6 +468,11 @@
     <string name="bt_sec_options">التحسينات</string>
     <string name="bt_sec_details">تفاصيل الجهاز</string>
     <string name="bt_n_on">%1$d من %2$d مفعّل</string>
-    <string name="glass_off">إيقاف تأثير الزجاج</string>
-    <string name="glass_off_sub">خلفيات صلبة بدل التأثير الزجاجي الشفاف في كل الشاشات</string>
+    <string name="set_glass">الزجاج</string>
+    <string name="glass_style">النمط</string>
+    <string name="glass_frost">زجاج</string>
+    <string name="glass_crystal">كريستال</string>
+    <string name="glass_level">المستوى</string>
+    <string name="glass_none">متوقف</string>
+    <string name="glass_hint">الزجاج مموّه وضبابي، والكريستال أصفى وأوضح. كلما ارتفع المستوى زادت الشفافية والتمويه. المستوى 0 يوقف الزجاج.</string>
 </resources>

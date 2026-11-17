@@ -444,6 +444,11 @@
     <string name="bt_sec_options">Enhancements</string>
     <string name="bt_sec_details">Device details</string>
     <string name="bt_n_on">%1$d of %2$d on</string>
-    <string name="glass_off">Turn off glass</string>
-    <string name="glass_off_sub">Solid backgrounds instead of the blurred see-through look, in every screen</string>
+    <string name="set_glass">Glass</string>
+    <string name="glass_style">Style</string>
+    <string name="glass_frost">Glass</string>
+    <string name="glass_crystal">Crystal</string>
+    <string name="glass_level">Level</string>
+    <string name="glass_none">Off</string>
+    <string name="glass_hint">Glass is frosted and blurred; Crystal is clearer and sharper. Higher levels are more see-through and blurrier. 0 turns the glass off.</string>
 </resources>

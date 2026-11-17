@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <exclude domain="sharedpref" path="simomusic_secret.xml" />
+    <exclude domain="sharedpref" path="simomusic_stats.xml" />
+    <exclude domain="file" path="whisper" />
+</full-backup-content>

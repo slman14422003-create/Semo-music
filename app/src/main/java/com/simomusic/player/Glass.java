@@ -28,19 +28,57 @@ public final class Glass {
 
     static volatile long hotUntil;
 
-    /** "Turn off glass" in Settings: every blur / see-through surface becomes a plain solid one. */
+    /**
+     * Glass level (0 = off, 1..10) and style (0 = frosted glass, 1 = clear crystal), chosen in Settings.
+     * The level sets how much blur and how little tint a surface gets; crystal is clearer and sharper than glass.
+     */
     public static volatile boolean OFF;
+    public static volatile int LEVEL = 6;
+    public static volatile int STYLE;
 
     public static void load(Context c) {
-        OFF = Store.flag(c, "glass_off", false);
+        android.content.SharedPreferences p = Store.prefs(c);
+        int lv = p.getInt("glass_level", p.getBoolean("glass_off", false) ? 0 : 6);
+        LEVEL = Math.max(0, Math.min(10, lv));
+        STYLE = p.getInt("glass_style", 0) == 1 ? 1 : 0;
+        OFF = LEVEL == 0;
     }
 
-    /** Sets one of the see-through backgrounds; with glass off it is painted solid (shape, corners and stroke kept). */
+    public static void save(Context c, int level, int style) {
+        Store.prefs(c).edit().putInt("glass_level", level).putInt("glass_style", style).apply();
+        load(c);
+    }
+
+    /** How much of the blur radius is used: 1 at the default level. */
+    static float blurScale() {
+        float f = LEVEL / 6f;
+        return STYLE == 1 ? Math.max(0.25f, 0.4f * f) : Math.max(0.3f, f);
+    }
+
+    /** How much of the tint opacity is kept: more level = more see-through. */
+    static float tintScale() {
+        float f = LEVEL / 6f;
+        float s = STYLE == 1 ? 1.3f - 0.75f * f : 1.5f - 0.5f * f;
+        return Math.max(0.15f, Math.min(1.6f, s));
+    }
+
+    static int blur(int base) {
+        return Math.max(1, Math.round(base * blurScale()));
+    }
+
+    /** The same color with its opacity scaled by the glass level. */
+    public static int tint(int color) {
+        int a = Math.min(255, Math.max(0, Math.round(((color >>> 24) & 0xFF) * tintScale())));
+        return (a << 24) | (color & 0x00FFFFFF);
+    }
+
+    /** Sets one of the see-through backgrounds; at level 0 it is painted solid, otherwise its opacity follows the level. */
     public static void bg(View v, int res) {
         boolean glassy = res == R.drawable.bg_card || res == R.drawable.bg_segment || res == R.drawable.btn_secondary
                 || res == R.drawable.bg_icon_btn || res == R.drawable.bg_input || res == R.drawable.bg_pill_glass
                 || res == R.drawable.bg_glass_deck;
-        if (!OFF || !glassy) {
+        boolean plain = !OFF && LEVEL == 6 && STYLE == 0;
+        if (!glassy || plain) {
             v.setBackgroundResource(res);
             return;
         }
@@ -51,15 +89,29 @@ public final class Glass {
             return;
         }
         d = d.mutate();
-        int col = res == R.drawable.bg_pill_glass || res == R.drawable.bg_glass_deck ? 0xFF26262D
-                : Ui.color(c, res == R.drawable.bg_card ? R.color.surface : R.color.surface_high);
+        int col = 0;   // 0 = keep the drawable's own color and only scale its opacity
+        if (OFF) {
+            col = res == R.drawable.bg_pill_glass || res == R.drawable.bg_glass_deck ? 0xFF26262D
+                    : Ui.color(c, res == R.drawable.bg_card ? R.color.surface : R.color.surface_high);
+        }
         paint(d, col);
         v.setBackground(d);
     }
 
     private static void paint(android.graphics.drawable.Drawable d, int col) {
         if (d instanceof android.graphics.drawable.GradientDrawable) {
-            ((android.graphics.drawable.GradientDrawable) d).setColor(col);
+            android.graphics.drawable.GradientDrawable gd = (android.graphics.drawable.GradientDrawable) d;
+            if (col != 0) gd.setColor(col);
+            else {
+                int[] cs = gd.getColors();
+                if (cs != null && cs.length > 0) {
+                    int[] n = new int[cs.length];
+                    for (int i = 0; i < cs.length; i++) n[i] = tint(cs[i]);
+                    gd.setColors(n);
+                } else if (gd.getColor() != null) {
+                    gd.setColor(tint(gd.getColor().getDefaultColor()));
+                }
+            }
         } else if (d instanceof android.graphics.drawable.InsetDrawable) {
             paint(((android.graphics.drawable.InsetDrawable) d).getDrawable(), col);
         } else if (d instanceof android.graphics.drawable.LayerDrawable) {   // also covers the ripple

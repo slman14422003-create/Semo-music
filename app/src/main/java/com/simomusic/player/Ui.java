@@ -541,7 +541,7 @@ public final class Ui {
     }
 
     public static void shape(Context c, View card, boolean first, boolean last, int fillRes, int strokeCol) {
-        int fillCol = color(c, fillRes == R.color.surface ? (Glass.OFF ? R.color.surface : R.color.glass_row) : fillRes), ripCol = color(c, R.color.ripple), bigPx = c.getResources().getDimensionPixelSize(R.dimen.radius_card);
+        int fillCol = fillRes == R.color.surface && !Glass.OFF ? Glass.tint(color(c, R.color.glass_row)) : color(c, fillRes == R.color.surface ? R.color.surface : fillRes), ripCol = color(c, R.color.ripple), bigPx = c.getResources().getDimensionPixelSize(R.dimen.radius_card);
         int line = strokeCol != 0 ? strokeCol : color(c, R.color.row_stroke);
         String key = first + "," + last + "," + fillCol + "," + ripCol + "," + bigPx + "," + line;
         android.graphics.drawable.Drawable.ConstantState cs = SHAPES.get(key);

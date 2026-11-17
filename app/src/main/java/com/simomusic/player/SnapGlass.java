@@ -41,7 +41,7 @@ public final class SnapGlass extends Drawable {
         hi = Ui.color(c, R.color.glass_hi);
         lo = Ui.color(c, R.color.glass_lo);
         sheenTop = Ui.color(c, R.color.glass_sheen);
-        tintPaint.setColor(Ui.color(c, R.color.glass_snap_tint));
+        tintPaint.setColor(Glass.tint(Ui.color(c, R.color.glass_snap_tint)));
         solidPaint.setColor(Ui.color(c, R.color.glass_sheet));
         ColorMatrix cm = new ColorMatrix();
         cm.setSaturation(1.5f);

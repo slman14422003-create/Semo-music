@@ -217,7 +217,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             nodeW = w;
             nodeH = h;
             node.setPosition(0, 0, w, h);
-            float sigma = Math.max(1f, blurR * ds * 0.5f);
+            float sigma = Math.max(1f, Glass.blur(blurR) * ds * 0.5f);
             RenderEffect blur = RenderEffect.createBlurEffect(sigma, sigma, Shader.TileMode.CLAMP);
             node.setRenderEffect(RenderEffect.createColorFilterEffect(new ColorMatrixColorFilter(sat), blur));
         }
@@ -261,7 +261,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             source.draw(cv);
             cv.restore();
             bmp.getPixels(px, 0, bw, 0, 0, bw, bh);
-            StackBlur.blur(px, bw, bh, blurR);
+            StackBlur.blur(px, bw, bh, Glass.blur(blurR));
             bmp.setPixels(px, 0, bw, 0, 0, bw, bh);
         } catch (RuntimeException | OutOfMemoryError e) {
             failed = true;
@@ -295,7 +295,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
                 if (!frozen || !recorded || nodeW != r.width() || nodeH != r.height()) recordGpu(r);
                 node.setAlpha(alpha / 255f);
                 canvas.drawRenderNode(node);
-                tintPaint.setColor(tint);
+                tintPaint.setColor(Glass.tint(tint));
                 tintPaint.setAlpha(tintPaint.getAlpha() * alpha / 255);
                 canvas.drawRect(r, tintPaint);
             } catch (RuntimeException e) {
@@ -308,7 +308,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             canvas.drawRect(r, solidPaint);
         } else if (gpu && frozen && !failed && node != null && recorded) {
             canvas.drawRenderNode(node);
-            tintPaint.setColor(tint);
+            tintPaint.setColor(Glass.tint(tint));
             tintPaint.setAlpha(tintPaint.getAlpha() * alpha / 255);
             canvas.drawRect(r, tintPaint);
             wake();
@@ -316,7 +316,7 @@ public final class LiveGlass extends Drawable implements ViewTreeObserver.OnPreD
             rect.set(r);
             bmpPaint.setAlpha(alpha);
             canvas.drawBitmap(bmp, null, rect, bmpPaint);
-            tintPaint.setColor(tint);
+            tintPaint.setColor(Glass.tint(tint));
             tintPaint.setAlpha(tintPaint.getAlpha() * alpha / 255);
             canvas.drawRect(r, tintPaint);
         } else {

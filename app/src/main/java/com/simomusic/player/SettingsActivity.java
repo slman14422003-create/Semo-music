@@ -22,6 +22,106 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
     private int permSig = -1;
     private final TextView[] modeBtns = new TextView[3];
 
+    /** Glass: style (glass / crystal) and a level bar from 0 (off, solid) to 10. */
+    private View glassCard() {
+        final LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(IosUi.cardBg(this));
+        card.setPadding(Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16), Ui.dp(this, 16));
+        LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2);
+        cp.setMargins(Ui.dp(this, 16), 0, Ui.dp(this, 16), 0);
+        card.setLayoutParams(cp);
+
+        TextView t1 = Ui.text(this, getString(R.string.glass_style), 15, R.color.text_secondary);
+        t1.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        card.addView(t1);
+        final LinearLayout seg = new LinearLayout(this);
+        Glass.bg(seg, R.drawable.bg_segment);
+        seg.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
+        final TextView[] st = new TextView[2];
+        int[] names = {R.string.glass_frost, R.string.glass_crystal};
+        final Runnable paint = () -> {
+            for (int i = 0; i < 2; i++) {
+                boolean on = Glass.STYLE == i;
+                st[i].setTextColor(Ui.color(this, on ? R.color.on_accent : R.color.text_secondary));
+                st[i].setTypeface(on ? android.graphics.Typeface.DEFAULT_BOLD : android.graphics.Typeface.DEFAULT);
+                st[i].setBackgroundResource(on ? R.drawable.bg_segment_sel : 0);
+            }
+        };
+        for (int i = 0; i < 2; i++) {
+            final int k = i;
+            TextView b = Ui.text(this, getString(names[i]), 15, R.color.text_secondary);
+            b.setGravity(android.view.Gravity.CENTER);
+            b.setMinHeight(Ui.dp(this, 44));
+            b.setOnClickListener(v -> {
+                if (Glass.STYLE == k) return;
+                Ui.tap(v);
+                Glass.save(this, Glass.LEVEL == 0 ? 6 : Glass.LEVEL, k);
+                paint.run();
+                App.recreateAll();
+            });
+            st[i] = b;
+            seg.addView(b, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        paint.run();
+        LinearLayout.LayoutParams sp = new LinearLayout.LayoutParams(-1, -2);
+        sp.topMargin = Ui.dp(this, 10);
+        card.addView(seg, sp);
+
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        TextView t2 = Ui.text(this, getString(R.string.glass_level), 15, R.color.text_secondary);
+        t2.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        head.addView(t2, new LinearLayout.LayoutParams(0, -2, 1f));
+        final TextView val = Ui.text(this, levelLabel(Glass.LEVEL), 15, R.color.text_primary);
+        head.addView(val);
+        LinearLayout.LayoutParams hp = new LinearLayout.LayoutParams(-1, -2);
+        hp.topMargin = Ui.dp(this, 18);
+        card.addView(head, hp);
+
+        android.widget.SeekBar bar = new android.widget.SeekBar(this);
+        bar.setMax(10);
+        bar.setProgress(Glass.LEVEL);
+        int acc = Ui.color(this, R.color.accent);
+        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(acc));
+        bar.setThumbTintList(android.content.res.ColorStateList.valueOf(acc));
+        bar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Ui.color(this, R.color.stroke)));
+        bar.setOnTouchListener((x, e) -> {
+            if (x.getParent() != null) x.getParent().requestDisallowInterceptTouchEvent(true);
+            return false;
+        });
+        bar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar s, int p, boolean user) {
+                val.setText(levelLabel(p));
+                if (user) Ui.tick(s);
+            }
+
+            @Override
+            public void onStartTrackingTouch(android.widget.SeekBar s) {
+                Ui.tap(s);
+            }
+
+            @Override
+            public void onStopTrackingTouch(android.widget.SeekBar s) {
+                if (s.getProgress() == Glass.LEVEL) return;
+                Glass.save(SettingsActivity.this, s.getProgress(), Glass.STYLE);
+                App.recreateAll();
+            }
+        });
+        LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(-1, Ui.dp(this, 44));
+        bp.topMargin = Ui.dp(this, 4);
+        card.addView(bar, bp);
+
+        TextView hint = Ui.text(this, getString(R.string.glass_hint), 13, R.color.text_hint);
+        card.addView(hint);
+        return card;
+    }
+
+    private String levelLabel(int p) {
+        return p == 0 ? getString(R.string.glass_none) : String.valueOf(p);
+    }
+
     /** Theme mode (auto / light / dark) and the accent color swatches. */
     private View appearanceCard() {
         LinearLayout card = new LinearLayout(this);
@@ -198,16 +298,12 @@ public class SettingsActivity extends AppCompatActivity implements FullBleed {
         col.addView(IosUi.title(this, getString(R.string.settings)));
         col.addView(IosUi.section(this, R.string.set_appearance));
         col.addView(appearanceCard());
+        col.addView(IosUi.section(this, R.string.set_glass));
+        col.addView(glassCard());
 
         // ---- general
         col.addView(IosUi.section(this, R.string.set_general));
         LinearLayout gen = group(col);
-        gen.addView(IosUi.toggle(this, getString(R.string.glass_off), getString(R.string.glass_off_sub),
-                Glass.OFF, (v, on) -> {
-                    Store.setFlag(this, "glass_off", on);
-                    Glass.OFF = on;
-                    App.recreateAll();
-                }));
         gen.addView(IosUi.row(this, R.drawable.ic_language, getString(R.string.language), langLabel(), null, false, v -> pickLang()));
         gen.addView(IosUi.row(this, R.drawable.ic_play, getString(R.string.default_app), getString(R.string.default_app_sub), null, false, v -> pickDefault()));
         gen.addView(IosUi.row(this, R.drawable.ic_music, getString(R.string.app_icon), getString(IconSwitcher.NAME[IconSwitcher.current(this)]), null, false,
